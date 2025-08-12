@@ -29,9 +29,10 @@
   #status{position:absolute;top:52px;left:12px;z-index:4;font-size:12px;color:#0369a1}
 
   /* On-screen arrow pad (bottom-right) */
-  .pad{position:absolute;right:14px;bottom:14px;z-index:3;display:grid;grid-template-columns:48px 48px 48px;grid-template-rows:48px 48px 48px;gap:8px}
-  .pad button{appearance:none;border:0;border-radius:10px;background:rgba(255,255,255,.9);box-shadow:0 6px 18px rgba(2,6,23,.15);
-              color:#0b1220;font-weight:700;cursor:pointer}
+  .pad{position:absolute;right:14px;bottom:14px;z-index:3;display:grid;
+       grid-template-columns:48px 48px 48px;grid-template-rows:48px 48px 48px;gap:8px}
+  .pad button{appearance:none;border:0;border-radius:10px;background:rgba(255,255,255,.95);
+              box-shadow:0 6px 18px rgba(2,6,23,.15);color:#0b1220;font-weight:700;cursor:pointer}
   .pad .blank{background:transparent;box-shadow:none}
 </style>
 </head>
@@ -44,6 +45,7 @@
   </div>
   <div id="status">Loading…</div>
   <div class="scene" id="scene"></div>
+
   <div class="hud">
     <div class="ctl">
       <label for="speed">Speed</label>
@@ -58,8 +60,8 @@
     <button id="center" class="btn ghost">Center View</button>
   </div>
 
-  <!-- Arrow pad -->
-  <div class="pad" aria-label="view controls">
+  <!-- Arrow pad for LOOK controls -->
+  <div class="pad" aria-label="look controls">
     <button class="blank" disabled></button>
     <button id="padUp">↑</button>
     <button class="blank" disabled></button>
@@ -72,6 +74,7 @@
   </div>
 </div>
 
+<!-- Local Three.js (no CDNs) -->
 <script src="./three.min.js"></script>
 <script>
 (function(){
@@ -130,7 +133,7 @@
   );
   ground.rotation.x = -Math.PI/2; ground.receiveShadow = true; scene.add(ground);
 
-  // Track (correct tangent math)
+  // Track (correct tangent)
   const TRACK_RADIUS = 60, GAUGE = 0.6;
   function CirclePath(r){ this.radius=r; }
   CirclePath.prototype = Object.create(THREE.Curve.prototype);
@@ -164,7 +167,7 @@
   }
   ties.castShadow = ties.receiveShadow = true; scene.add(ties);
 
-  // Trees
+  // Trees (layered cones + varied hue)
   const trunkGeo = new THREE.CylinderGeometry(0.35,0.45,2.6, 10);
   const trunkMat = new THREE.MeshStandardMaterial({ color:0x6b4f2c, roughness:.95 });
   const foliageMat = new THREE.MeshStandardMaterial({ color:0x2f7a4a, roughness:.9, metalness:0, envMapIntensity:0.2 });
@@ -172,9 +175,9 @@
   function addTree(x,z,s){
     const trunk = new THREE.Mesh(trunkGeo, trunkMat); trunk.scale.set(s,s,s);
     trunk.position.set(x,1.3*s,z); trunk.castShadow=trunk.receiveShadow=true; scene.add(trunk);
-    const c1=new THREE.Mesh(new THREE.ConeGeometry(1.7*s,3.0*s, 10), foliageMat); c1.position.set(x,3.0*s,z); c1.castShadow=true;
-    const c2=new THREE.Mesh(new THREE.ConeGeometry(1.4*s,2.6*s, 10), foliageMat); c2.position.set(x,4.4*s,z); c2.castShadow=true;
-    const c3=new THREE.Mesh(new THREE.ConeGeometry(1.1*s,2.2*s, 10), foliageMat); c3.position.set(x,5.6*s,z); c3.castShadow=true;
+    const c1=new THREE.Mesh(new THREE.ConeGeometry(1.7*s,3.0*s, 12), foliageMat); c1.position.set(x,3.0*s,z); c1.castShadow=true;
+    const c2=new THREE.Mesh(new THREE.ConeGeometry(1.4*s,2.6*s, 12), foliageMat); c2.position.set(x,4.4*s,z); c2.castShadow=true;
+    const c3=new THREE.Mesh(new THREE.ConeGeometry(1.1*s,2.2*s, 12), foliageMat); c3.position.set(x,5.6*s,z); c3.castShadow=true;
     scene.add(c1,c2,c3);
   }
   for(let i=0;i<600;i++){ const r=rand(70,500), th=rand(0,Math.PI*2); addTree(Math.cos(th)*r, Math.sin(th)*r, rand(.7,1.3)); }
@@ -229,12 +232,10 @@
   // Helpers
   const ANGLE_PER_M = 1 / TRACK_RADIUS;           // rad per meter
   const ARC_SPACING = CAR_SPACING * ANGLE_PER_M;  // rad between cars
-
   function placeCar(car, angle){
     const x = Math.cos(angle) * TRACK_RADIUS;
     const z = Math.sin(angle) * TRACK_RADIUS;
-    // correct tangent vector: (-sin a, cos a)
-    const tx = -Math.sin(angle), tz = Math.cos(angle);
+    const tx = -Math.sin(angle), tz = Math.cos(angle); // correct tangent
     car.position.set(x, 0, z);
     car.rotation.y = Math.atan2(tx, tz);
   }
@@ -242,37 +243,39 @@
   // Camera ride params
   const CAMERA_CAR_INDEX = 10;
   let yawDeg = 0;
-  let pitchDeg = -2; // slight look DOWN (fixes “looking up”)
+  let pitchDeg = -3; // slight look down by default
+  const clamp = (v,a,b)=>Math.max(a,Math.min(b,v));
+  const PITCH_MIN = -35, PITCH_MAX = 25; // keep comfortable range
 
   function updateCamera(rideAng, time){
     const cx = Math.cos(rideAng) * TRACK_RADIUS;
     const cz = Math.sin(rideAng) * TRACK_RADIUS;
-    const tx = -Math.sin(rideAng), tz = Math.cos(rideAng); // tangent
+    const tx = -Math.sin(rideAng), tz = Math.cos(rideAng);
     const tangentY = Math.atan2(tx, tz);
     camYaw.position.set(cx, 0.62 + Math.sin(time*2.5)*0.015, cz); // tiny bob
     camYaw.rotation.y = tangentY + THREE.MathUtils.degToRad(yawDeg);
-    camPitch.rotation.x = THREE.MathUtils.degToRad(pitchDeg);
+    camPitch.rotation.x = THREE.MathUtils.degToRad(clamp(pitchDeg, PITCH_MIN, PITCH_MAX));
     camera.position.set(0,0,0);
   }
 
-  // UI + controls
+  // UI + speed slider
   const $ = id=>document.getElementById(id);
   let mph = parseFloat($("speed").value);
   $("mph").textContent = String(mph);
   $("speed").addEventListener("input", ()=>{ mph=parseFloat($("speed").value); $("mph").textContent=String(mph); });
 
-  // Keyboard arrows
+  // LOOK controls — keyboard arrows
   window.addEventListener("keydown", (e)=>{
-    if(e.key === "ArrowLeft"){ yawDeg -= 4; }
+    if(e.key === "ArrowLeft"){  yawDeg -= 4; }
     if(e.key === "ArrowRight"){ yawDeg += 4; }
-    if(e.key === "ArrowUp"){ mph = Math.min(35, mph+1); $("speed").value = String(mph); $("mph").textContent=String(mph); }
-    if(e.key === "ArrowDown"){ mph = Math.max(0, mph-1); $("speed").value = String(mph); $("mph").textContent=String(mph); }
+    if(e.key === "ArrowUp"){    pitchDeg = clamp(pitchDeg + 3, PITCH_MIN, PITCH_MAX); }
+    if(e.key === "ArrowDown"){  pitchDeg = clamp(pitchDeg - 3, PITCH_MIN, PITCH_MAX); }
   });
 
-  // On-screen arrow pad (press-and-hold)
+  // On‑screen arrow pad (press‑and‑hold)
   function hold(btn, onTick){
     let t=null;
-    const start=()=>{ if(t) return; onTick(); t=setInterval(onTick, 90); };
+    const start=(ev)=>{ ev.preventDefault(); if(t) return; onTick(); t=setInterval(onTick, 80); };
     const stop =()=>{ clearInterval(t); t=null; };
     btn.addEventListener("pointerdown", start);
     btn.addEventListener("pointerup", stop);
@@ -281,8 +284,8 @@
   }
   hold($("padLeft"),  ()=>{ yawDeg -= 4; });
   hold($("padRight"), ()=>{ yawDeg += 4; });
-  hold($("padUp"),    ()=>{ mph = Math.min(35, mph+1); $("speed").value = String(mph); $("mph").textContent=String(mph); });
-  hold($("padDown"),  ()=>{ mph = Math.max(0, mph-1); $("speed").value = String(mph); $("mph").textContent=String(mph); });
+  hold($("padUp"),    ()=>{ pitchDeg = clamp(pitchDeg + 3, PITCH_MIN, PITCH_MAX); });
+  hold($("padDown"),  ()=>{ pitchDeg = clamp(pitchDeg - 3, PITCH_MIN, PITCH_MAX); });
 
   // Audio
   const audio = new (window.AudioContext||window.webkitAudioContext)();
@@ -361,7 +364,7 @@
   }
   animate();
 
-  log("Fixed view — arrows steer, up/down sets speed.");
+  log("Arrows = look (L/R/U/D). Speed on slider.");
 })();
 </script>
 </body>
