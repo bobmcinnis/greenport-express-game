@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Greenport Express — Miniature Railroad World</title>
+<title>Greenport Express — Pop & Play</title>
 <style>
   :root{--bg:#0b1220;--fg:#e5e7eb}
   html,body{height:100%;margin:0}
@@ -11,7 +11,6 @@
   .wrap{position:fixed;inset:0;background:var(--bg);color:var(--fg)}
   .head{position:absolute;top:0;left:0;right:0;display:flex;align-items:center;justify-content:center;gap:12px;background:#fff;color:#0b1220;padding:10px 14px;box-shadow:0 10px 30px rgba(2,6,23,.12);z-index:3}
   .head h1{margin:0;font-size:18px}
-  .badge{font-size:12px;color:#fff;background:linear-gradient(135deg,#0ea5e9,#22d3ee);padding:4px 8px;border-radius:999px}
   .headtoggle{position:absolute;left:14px}
   .scene{position:absolute;inset:44px 0 0 0}
   .hud{position:absolute;left:50%;bottom:12px;transform:translateX(-50%);display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:14px;background:rgba(255,255,255,.95);backdrop-filter:blur(8px);box-shadow:0 10px 30px rgba(2,6,23,.15);z-index:3;color:#0b1220;flex-wrap:wrap}
@@ -24,36 +23,44 @@
   .hidden{display:none!important}
   #status{position:absolute;top:52px;left:12px;z-index:4;font-size:12px;color:#0369a1}
 
+  /* Scoreboard (top-right) */
+  .ribbon{position:absolute;top:52px;right:12px;z-index:4;background:rgba(255,255,255,.95);color:#0b1220;border-radius:12px;padding:10px 12px;box-shadow:0 10px 30px rgba(2,6,23,.15);min-width:220px}
+  .row{display:flex;align-items:center;justify-content:space-between;margin:2px 0}
+  .tag{padding:2px 8px;border-radius:999px;background:#e2e8f0;font-size:12px}
+
+  /* Crosshair */
+  .reticle{position:absolute;inset:44px 0 0 0;pointer-events:none;display:grid;place-items:center}
+  .reticle:after{content:"";width:22px;height:22px;border-radius:50%;border:2px solid rgba(255,255,255,.9);box-shadow:0 0 0 2px rgba(0,0,0,.2) inset}
+
+  /* On-screen look pad (optional; many kids will just drag) */
   .pad{position:absolute;right:14px;bottom:14px;z-index:3;display:grid;grid-template-columns:56px 56px 56px;grid-template-rows:56px 56px 56px;gap:8px}
   .pad button{appearance:none;border:0;border-radius:10px;background:rgba(255,255,255,.95);box-shadow:0 6px 18px rgba(2,6,23,.15);color:#0b1220;font-weight:700;cursor:pointer}
   .pad .blank{visibility:hidden}
 
-  .ribbon{position:absolute;top:52px;right:12px;z-index:4;background:rgba(255,255,255,.95);color:#0b1220;border-radius:12px;padding:10px 12px;box-shadow:0 10px 30px rgba(2,6,23,.15);min-width:220px}
-  .ribbon .row{display:flex;align-items:center;justify-content:space-between;margin:2px 0}
-  .tag{padding:2px 8px;border-radius:999px;background:#e2e8f0;font-size:12px}
+  /* Floating popup points */
+  .popup{position:absolute;left:0;top:0;transform:translate(-50%,-50%);color:#16a34a;font-weight:700;text-shadow:0 2px 6px rgba(0,0,0,.35);pointer-events:none}
 </style>
 </head>
 <body>
 <div class="wrap">
   <div class="head">
     <div class="headtoggle"><button id="toggleHeadline" class="ghost btn">Headline: On</button></div>
-    <h1 id="headline">Greenport Express</h1>
-    <span class="badge">Kids’ Miniature Railroad — Explore Greenport!</span>
+    <h1 id="headline">Greenport Express — Pop & Play</h1>
+    <span class="tag" style="background:#22c55e;color:#fff">Bubble/Confetti Blaster</span>
   </div>
 
   <div id="status">Loading…</div>
   <div class="scene" id="scene"></div>
+  <div class="reticle" aria-hidden="true"></div>
 
+  <!-- Scoreboard -->
   <div class="ribbon">
-    <div class="row"><strong>Score:</strong> <span id="score">0</span></div>
-    <div class="row"><span class="tag">Shells</span><span id="shells">0 / 12</span></div>
-    <div class="row"><span class="tag">Passengers</span><span id="pax">0</span></div>
-    <hr style="border:none;border-top:1px solid #e5e7eb;margin:8px 0">
-    <div style="font-size:12px;color:#334155">Daily Mission</div>
-    <div id="mission" style="font-size:13px">Pick up 6 passengers at the Carnival.</div>
-    <button id="reroll" class="btn ghost" style="margin-top:6px;padding:6px 10px">New Mission</button>
+    <div class="row"><strong>Score</strong><span id="score">0</span></div>
+    <div class="row"><span class="tag">Combo</span><span id="combo">x1</span></div>
+    <div class="row"><span class="tag">Hits</span><span id="hits">0</span></div>
   </div>
 
+  <!-- Controls -->
   <div class="hud">
     <div class="ctl">
       <label for="speed">Speed</label>
@@ -61,7 +68,9 @@
     </div>
     <div style="font-size:12px;color:#64748b"><strong id="mph">12</strong> mph</div>
     <div class="sp"></div>
-    <button id="whistle" class="btn">Whistle</button>
+    <button id="shoot" class="btn" title="Spacebar also shoots">Shoot!</button>
+    <div class="sp"></div>
+    <button id="whistle" class="btn ghost">Whistle</button>
     <button id="bell" class="btn ghost">Bell</button>
     <div class="sp"></div>
     <button id="dark" class="btn">Night</button>
@@ -70,7 +79,7 @@
     <button id="photo" class="btn ghost">Photo</button>
   </div>
 
-  <!-- On‑screen look pad -->
+  <!-- Optional on-screen look pad -->
   <div class="pad" aria-label="look controls">
     <span class="blank"></span><button id="padUp">↑</button><span class="blank"></span>
     <button id="padLeft">←</button><span class="blank"></span><button id="padRight">→</button>
@@ -78,7 +87,7 @@
   </div>
 </div>
 
-<!-- Only local Three.js (place three.min.js next to this file) -->
+<!-- Local Three.js (put three.min.js next to this file) -->
 <script src="./three.min.js"></script>
 <script>
 (function(){
@@ -86,7 +95,7 @@
   if(!window.THREE){ setStatus('ERROR: three.min.js not found next to index.html'); return; }
   const THREE = window.THREE;
 
-  // ==== Renderer & scene ====
+  // ---------- Renderer & scene ----------
   const container = document.getElementById('scene');
   const renderer = new THREE.WebGLRenderer({ antialias:true, preserveDrawingBuffer:true });
   renderer.setPixelRatio(Math.min(window.devicePixelRatio||1, 2));
@@ -94,32 +103,32 @@
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
+  renderer.toneMappingExposure = 1.0;
   container.appendChild(renderer.domElement);
 
   const scene = new THREE.Scene();
 
-  // Env (simple gradient env map)
+  // Quick env for PBR
   const pmrem = new THREE.PMREMGenerator(renderer);
-  const envCanvas = document.createElement('canvas'); envCanvas.width = envCanvas.height = 256;
+  const envCanvas = document.createElement('canvas'); envCanvas.width=envCanvas.height=256;
   const eg = envCanvas.getContext('2d'); const grd = eg.createLinearGradient(0,0,0,256);
   grd.addColorStop(0,'#cfe8ff'); grd.addColorStop(1,'#9fc3ff'); eg.fillStyle=grd; eg.fillRect(0,0,256,256);
   const envTex = new THREE.CanvasTexture(envCanvas); envTex.colorSpace = THREE.SRGBColorSpace;
   scene.environment = pmrem.fromEquirectangular(envTex).texture; envTex.dispose();
 
-  // Camera: we’ll directly set quaternion each frame (yaw+pitch applied after base forward)
+  // Camera (we'll set quaternion each frame from track forward + yaw/pitch)
   const camera = new THREE.PerspectiveCamera(72, 1, 0.05, 2500);
   scene.add(camera);
 
-  // Lighting
+  // Lights + night group
   const hemi = new THREE.HemisphereLight(0xffffff, 0x2a3b2a, 0.6); scene.add(hemi);
   const sun = new THREE.DirectionalLight(0xffffff, 2.1); sun.position.set(90,140,60);
-  sun.castShadow = true; sun.shadow.mapSize.set(2048,2048);
+  sun.castShadow=true; sun.shadow.mapSize.set(2048,2048);
   sun.shadow.camera.near=1; sun.shadow.camera.far=600;
-  sun.shadow.camera.left=-160; sun.shadow.camera.right=160; sun.shadow.camera.top=160; sun.shadow.camera.bottom=-160;
-  scene.add(sun);
+  sun.shadow.camera.left=-160; sun.shadow.camera.right=160; sun.shadow.camera.top=160; sun.shadow.camera.bottom=-160; scene.add(sun);
   const nightGroup = new THREE.Group(); nightGroup.visible=false; scene.add(nightGroup);
 
-  // Ground disk
+  // Ground
   const ground = new THREE.Mesh(new THREE.CircleGeometry(900, 128), new THREE.MeshStandardMaterial({ color:0x98cfa7, roughness:0.95 }));
   ground.rotation.x = -Math.PI/2; ground.receiveShadow=true; scene.add(ground);
 
@@ -149,35 +158,19 @@
   for(let i=0;i<900;i++){ const r=rnd(95,860), th=rnd(0,Math.PI*2); addTree(Math.cos(th)*r,Math.sin(th)*r,rnd(.6,1.25)); }
   for(let i=0;i<280;i++){ const r=rnd(110,280), th=rnd(0,Math.PI*2); if(Math.abs(r-TRACK_RADIUS)>12) addTree(Math.cos(th)*r,Math.sin(th)*r,rnd(.6,1.0)); }
 
-  // Minimal POIs (ferris / lighthouse / harbor / skate) — unchanged details for brevity
-  const POI=[]; function addPOI(name,ang,group){ POI.push({name,ang,group}); scene.add(group); }
-  function placeAround(g,ang,r){ g.position.set(Math.cos(ang)*r,0,Math.sin(ang)*r); g.lookAt(0,0,0); }
+  // Simple attractions (ferris for night sparkle)
+  const ferris=new THREE.Group(), wheelR=7;
+  ferris.add(new THREE.Mesh(new THREE.TorusGeometry(wheelR,0.18,8,48), new THREE.MeshStandardMaterial({color:0xffffff, roughness:.4})));
+  scene.add(ferris); ferris.position.set(TRACK_RADIUS+20,0,0);
 
-  const carnival=new THREE.Group(), wheel=new THREE.Group(), wheelR=7;
-  wheel.add(new THREE.Mesh(new THREE.TorusGeometry(wheelR,0.18,8,48), new THREE.MeshStandardMaterial({color:0xffffff, roughness:.4})));
-  carnival.add(wheel); addPOI('Carnival', Math.PI*0.05, carnival);
-
-  const lightHouse=new THREE.Group();
-  const tower=new THREE.Mesh(new THREE.CylinderGeometry(1.5,2.2,12,16), new THREE.MeshStandardMaterial({color:0xffffff, roughness:.9}));
-  const cap=new THREE.Mesh(new THREE.ConeGeometry(1.8,2,16), new THREE.MeshStandardMaterial({color:0xcc0000, roughness:.6}));
-  cap.position.y=7; tower.position.y=5; lightHouse.add(tower,cap);
-  const beam=new THREE.SpotLight(0xffeeaa, 12, 120, Math.PI/16, 0.35, 1.0); beam.position.set(0,10.2,0); beam.target.position.set(10,9,0);
-  nightGroup.add(beam,beam.target); addPOI('Lighthouse', Math.PI*0.62, lightHouse);
-
-  const harbor=new THREE.Group(); const water=new THREE.Mesh(new THREE.CircleGeometry(55,48), new THREE.MeshStandardMaterial({color:0x69b3ff, metalness:.1, roughness:.4}));
-  water.rotation.x=-Math.PI/2; harbor.add(water); addPOI('Harbor', Math.PI*0.80, harbor);
-
-  const skate=new THREE.Group(); const ramp=new THREE.Mesh(new THREE.CylinderGeometry(4,4,6,24,1,true,0,Math.PI/2), new THREE.MeshStandardMaterial({color:0xbfc9d1, roughness:.8}));
-  ramp.rotation.z=Math.PI/2; skate.add(ramp); addPOI('Skate Park', Math.PI*0.38, skate);
-
-  POI.forEach(p=>placeAround(p.group, p.ang, TRACK_RADIUS+18));
-
-  // Train + riders (kept from your last working version)
+  // -------- Train (cars only to keep perf) --------
   const CAR_CT=24, CAR_SP=2.2;
   const carMat=new THREE.MeshStandardMaterial({ color:0xbfc5cc, metalness:.85, roughness:.35, envMapIntensity:1.5 });
+  const train=new THREE.Group(), cars=[];
   function coalCar(){ const g=new THREE.Group(); const box=new THREE.Mesh(new THREE.BoxGeometry(1.8,0.7,1.2),carMat); box.castShadow=box.receiveShadow=true; g.add(box); return g; }
-  const train=new THREE.Group(), cars=[]; for(let i=0;i<CAR_CT;i++){ const c=coalCar(); cars.push(c); train.add(c); } scene.add(train);
+  for(let i=0;i<CAR_CT;i++){ const c=coalCar(); cars.push(c); train.add(c); } scene.add(train);
 
+  // Helpers to place cars
   const ANGLE_PER_M = 1 / TRACK_RADIUS;
   const ARC_SPACING = CAR_SP * ANGLE_PER_M;
   function placeCar(car, angle){
@@ -186,42 +179,75 @@
     car.position.set(x,0,z); car.rotation.y = Math.atan2(tx,tz);
   }
 
-  // Collectibles + stops (light)
-  const shellsGroup=new THREE.Group(); scene.add(shellsGroup);
-  const shellMat=new THREE.MeshStandardMaterial({color:0xfff3bf, metalness:.2, roughness:.5});
-  const shellGeo=new THREE.SphereGeometry(0.12,12,10); const SHELL_CT=12;
-  for(let i=0;i<SHELL_CT;i++){ const a=Math.random()*Math.PI*2, r=TRACK_RADIUS+(Math.random()<.5?-1.2:1.2);
-    const s=new THREE.Mesh(shellGeo,shellMat); s.position.set(Math.cos(a)*r,0.12,Math.sin(a)*r); shellsGroup.add(s); }
-  const stops=[]; function addStop(name,ang){ const g=new THREE.Group(); g.add(new THREE.Mesh(new THREE.BoxGeometry(3.5,0.2,1.2), new THREE.MeshStandardMaterial({color:0x333})));
-    placeAround(g,ang,TRACK_RADIUS-2.2); scene.add(g); stops.push({name,ang,group:g}); }
-  addStop('Carnival Station', Math.PI*0.05+0.03);
-  addStop('Harbor Dock', Math.PI*0.80+0.06);
+  // ---------- Targets ----------
+  // Types: balloon (easy), duck (moves), buoy (harbor), star (carnival)
+  const TARGETS = new THREE.Group(); scene.add(TARGETS);
+  const targetDefs = [
+    { kind:'balloon', color:0xff5d8f, radius:0.25, points:50 },
+    { kind:'balloon', color:0x7dd3fc, radius:0.25, points:50 },
+    { kind:'balloon', color:0xfde047, radius:0.25, points:50 },
+    { kind:'duck', color:0xffe08a, radius:0.28, points:75 },
+    { kind:'buoy', color:0x22c55e, radius:0.3, points:60 },
+    { kind:'star', color:0xf97316, radius:0.28, points:80 }
+  ];
 
-  // ===== UI / state =====
-  const $=id=>document.getElementById(id);
-  let mph=parseFloat($("speed").value); $("mph").textContent=String(mph);
-  $("speed").addEventListener("input",()=>{ mph=parseFloat($("speed").value); $("mph").textContent=String(mph); });
+  function makeTarget(def){
+    let mesh;
+    if(def.kind==='star'){
+      const star = new THREE.Shape();
+      const spikes=5, outer=def.radius*1.8, inner=def.radius*0.8;
+      let rot=Math.PI/2*3, x=0,y=0, step=Math.PI/spikes;
+      star.moveTo(0,-outer);
+      for(let i=0;i<spikes;i++){
+        x = Math.cos(rot)*outer; y = Math.sin(rot)*outer; star.lineTo(x,y); rot+=step;
+        x = Math.cos(rot)*inner; y = Math.sin(rot)*inner; star.lineTo(x,y); rot+=step;
+      }
+      star.lineTo(0,-outer);
+      const geo = new THREE.ExtrudeGeometry(star,{depth:0.12,bevelEnabled:false});
+      mesh = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({color:def.color, roughness:.5, metalness:.2, emissive:0x000000}));
+    } else if(def.kind==='buoy'){
+      const geo = new THREE.ConeGeometry(def.radius*1.1, def.radius*3.4, 12);
+      mesh = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({color:def.color, roughness:.6, metalness:.2}));
+    } else if(def.kind==='duck'){
+      const body = new THREE.Mesh(new THREE.SphereGeometry(def.radius*1.1, 12, 10), new THREE.MeshStandardMaterial({color:def.color, roughness:.7}));
+      const head = new THREE.Mesh(new THREE.SphereGeometry(def.radius*0.7, 10, 8), new THREE.MeshStandardMaterial({color:def.color, roughness:.7}));
+      const beak = new THREE.Mesh(new THREE.ConeGeometry(def.radius*0.35, def.radius*0.6, 8), new THREE.MeshStandardMaterial({color:0xff9900, roughness:.7}));
+      head.position.set(0, def.radius*0.9, def.radius*0.4); beak.rotation.x=Math.PI/2; beak.position.copy(head.position).add(new THREE.Vector3(0,0,def.radius*0.45));
+      mesh = new THREE.Group(); mesh.add(body, head, beak);
+    } else {
+      // balloon
+      const geo = new THREE.SphereGeometry(def.radius, 16, 12);
+      const mat = new THREE.MeshStandardMaterial({color:def.color, metalness:.1, roughness:.5, emissive:0x111111, emissiveIntensity:0.2});
+      mesh = new THREE.Mesh(geo, mat);
+      const string = new THREE.Mesh(new THREE.CylinderGeometry(0.02,0.02, def.radius*2.2, 6), new THREE.MeshStandardMaterial({color:0x888}));
+      string.position.y = -def.radius*1.1; mesh.add(string);
+    }
+    mesh.userData = { kind:def.kind, points:def.points, alive:true, baseY:0, animT:Math.random()*10 };
+    mesh.castShadow=true; mesh.receiveShadow=false;
+    return mesh;
+  }
 
-  let yawDeg=0, pitchDeg=0;                // your controls
-  const PITCH_MIN=-80, PITCH_MAX=80;       // wider range for clear look down/up
-  let eyeY = 0.62, targetEye = 0.62;       // seated height
-  const SEATED=0.62, TALL=1.05;
+  // Distribute targets around the loop
+  function spawnTargets() {
+    for(let i=0;i<80;i++){
+      const def = targetDefs[Math.floor(Math.random()*targetDefs.length)];
+      const t = Math.random()*Math.PI*2;
+      const r = TRACK_RADIUS + rnd(-12, 20);
+      const m = makeTarget(def);
+      m.position.set(Math.cos(t)*r, def.kind==='buoy' ? 0.05 : rnd(0.4, 2.5), Math.sin(t)*r);
+      m.userData.baseY = m.position.y;
+      TARGETS.add(m);
+    }
+  }
+  spawnTargets();
 
-  // input: arrows and pad
-  window.addEventListener('keydown',e=>{
-    const step=4;
-    if(e.key==='ArrowLeft')  yawDeg-=step;
-    if(e.key==='ArrowRight') yawDeg+=step;
-    if(e.key==='ArrowUp')    pitchDeg=Math.min(PITCH_MAX, pitchDeg+step);
-    if(e.key==='ArrowDown')  pitchDeg=Math.max(PITCH_MIN, pitchDeg-step);
-  });
-  function hold(btn,fn){ let t=null; const start=ev=>{ev.preventDefault(); if(t) return; fn(); t=setInterval(fn,80)}; const stop=()=>{clearInterval(t);t=null};
-    btn.addEventListener('pointerdown',start); btn.addEventListener('pointerup',stop); btn.addEventListener('pointerleave',stop); btn.addEventListener('pointercancel',stop); }
-  hold($("padLeft"), ()=>{yawDeg-=4}); hold($("padRight"), ()=>{yawDeg+=4});
-  hold($("padUp"), ()=>{pitchDeg=Math.min(PITCH_MAX, pitchDeg+3)});
-  hold($("padDown"), ()=>{pitchDeg=Math.max(PITCH_MIN, pitchDeg-3)});
+  // ---------- Aiming / camera control ----------
+  let yawDeg=0, pitchDeg=0;
+  const PITCH_MIN=-80, PITCH_MAX=80;
+  let eyeY = 0.7, targetEye = 0.7;
+  const SEATED=0.7, TALL=1.15;
 
-  // drag look (mouse/touch)
+  // Mouse/touch drag
   (function attachDrag(){
     const el=renderer.domElement; let drag=false,lx=0,ly=0;
     const s=0.18; const P=e=>e.touches?{x:e.touches[0].clientX,y:e.touches[0].clientY}:{x:e.clientX,y:e.clientY};
@@ -232,80 +258,163 @@
     el.addEventListener('touchstart',down,{passive:false}); el.addEventListener('touchmove',move,{passive:false}); el.addEventListener('touchend',up);
   })();
 
-  // Tall / center / dark / headline / audio / photo
-  $("tall").addEventListener("click",()=>{ targetEye = (targetEye===SEATED?TALL:SEATED); $("tall").textContent=`Tall: ${targetEye===TALL?'On':'Off'}`; $("tall").classList.toggle('ghost', targetEye!==TALL); });
-  $("center").addEventListener("click",()=>{ yawDeg=0; pitchDeg=0; });
-  let isNight=false; function setNight(on){ isNight=on; nightGroup.visible=on; renderer.setClearColor(on?0x06101f:0xcfe8ff,1); hemi.intensity=on?.25:.6; sun.intensity=on?1.1:2.1; $("dark").textContent=on?'Day':'Night'; }
-  setNight(false); $("dark").addEventListener("click",()=>setNight(!isNight));
-  let headOn=true; $("toggleHeadline").addEventListener("click",()=>{ headOn=!headOn; $("headline").classList.toggle('hidden',!headOn); $("toggleHeadline").textContent=`Headline: ${headOn?'On':'Off'}`; });
-  const audio=new (window.AudioContext||window.webkitAudioContext)();
-  $("whistle").addEventListener("click",()=>{ if(audio.state==='suspended') audio.resume(); const o=audio.createOscillator(),g=audio.createGain(); g.gain.value=.001;o.type='sine';
+  // Keyboard arrows
+  window.addEventListener('keydown',e=>{
+    const step=4;
+    if(e.key==='ArrowLeft')  yawDeg-=step;
+    if(e.key==='ArrowRight') yawDeg+=step;
+    if(e.key==='ArrowUp')    pitchDeg=Math.min(PITCH_MAX, pitchDeg+step);
+    if(e.key==='ArrowDown')  pitchDeg=Math.max(PITCH_MIN, pitchDeg-step);
+    if(e.code==='Space'){ shoot(); }
+  });
+
+  // On-screen pad
+  function hold(btn,fn){ let t=null; const start=ev=>{ev.preventDefault(); if(t) return; fn(); t=setInterval(fn,80)}; const stop=()=>{clearInterval(t);t=null};
+    btn.addEventListener('pointerdown',start); btn.addEventListener('pointerup',stop); btn.addEventListener('pointerleave',stop); btn.addEventListener('pointercancel',stop); }
+  hold(document.getElementById('padLeft'), ()=>{yawDeg-=4});  hold(document.getElementById('padRight'), ()=>{yawDeg+=4});
+  hold(document.getElementById('padUp'),   ()=>{pitchDeg=Math.min(PITCH_MAX, pitchDeg+3)}); hold(document.getElementById('padDown'), ()=>{pitchDeg=Math.max(PITCH_MIN, pitchDeg-3)});
+
+  // Tall / center / night / headline / photo
+  document.getElementById('tall').addEventListener('click',()=>{ targetEye = (targetEye===SEATED?TALL:SEATED); const on = targetEye===TALL; const b=document.getElementById('tall'); b.textContent=`Tall: ${on?'On':'Off'}`; b.classList.toggle('ghost', !on); });
+  document.getElementById('center').addEventListener('click',()=>{ yawDeg=0; pitchDeg=0; });
+  let isNight=false; function setNight(on){ isNight=on; nightGroup.visible=on; renderer.setClearColor(on?0x06101f:0xcfe8ff,1); hemi.intensity=on?.25:.6; sun.intensity=on?1.1:2.1; document.getElementById('dark').textContent = on? 'Day' : 'Night'; }
+  setNight(false); document.getElementById('dark').addEventListener('click',()=>setNight(!isNight));
+  let headOn=true; document.getElementById('toggleHeadline').addEventListener('click',()=>{ headOn=!headOn; document.getElementById('headline').classList.toggle('hidden',!headOn); document.getElementById('toggleHeadline').textContent=`Headline: ${headOn?'On':'Off'}`; });
+  document.getElementById('photo').addEventListener('click',()=>{ const a=document.createElement('a'); a.download='greenport-express.png'; a.href=renderer.domElement.toDataURL('image/png'); a.click(); });
+
+  // Speed
+  const speedEl = document.getElementById('speed'), mphEl = document.getElementById('mph');
+  let mph = parseFloat(speedEl.value); mphEl.textContent = String(mph);
+  speedEl.addEventListener('input',()=>{ mph=parseFloat(speedEl.value); mphEl.textContent=String(mph); });
+
+  // Sounds (cute pops + ding)
+  const audio = new (window.AudioContext||window.webkitAudioContext)();
+  function popSound(){
+    const o=audio.createOscillator(), g=audio.createGain();
+    o.type='triangle'; o.frequency.value= Math.random()*200 + 600;
+    g.gain.value=.0001; g.gain.exponentialRampToValueAtTime(.3,audio.currentTime+.02); g.gain.exponentialRampToValueAtTime(.0001,audio.currentTime+.2);
+    o.connect(g).connect(audio.destination); o.start(); o.stop(audio.currentTime+.22);
+  }
+  function dingSound(){
+    const o=audio.createOscillator(), g=audio.createGain();
+    o.type='sine'; o.frequency.value=880; g.gain.value=.0001;
+    g.gain.exponentialRampToValueAtTime(.25,audio.currentTime+.01); g.gain.exponentialRampToValueAtTime(.0001,audio.currentTime+.25);
+    o.connect(g).connect(audio.destination); o.start(); o.stop(audio.currentTime+.26);
+  }
+  document.getElementById('whistle').addEventListener('click',()=>{ if(audio.state==='suspended') audio.resume(); const o=audio.createOscillator(),g=audio.createGain(); g.gain.value=.001;o.type='sine';
     o.frequency.setValueAtTime(720,audio.currentTime); o.frequency.exponentialRampToValueAtTime(1100,audio.currentTime+.35); o.frequency.exponentialRampToValueAtTime(680,audio.currentTime+.9);
     g.gain.exponentialRampToValueAtTime(.5,audio.currentTime+.04); g.gain.exponentialRampToValueAtTime(.32,audio.currentTime+.4); g.gain.exponentialRampToValueAtTime(.001,audio.currentTime+1.0);
     o.connect(g).connect(audio.destination); o.start(); o.stop(audio.currentTime+1.05); });
-  $("bell").addEventListener("click",()=>{ if(audio.state==='suspended') audio.resume(); const o1=audio.createOscillator(),o2=audio.createOscillator(),g=audio.createGain(); o1.type=o2.type='sine'; o1.frequency.value=660;o2.frequency.value=990; g.gain.value=.001;
-    g.gain.exponentialRampToValueAtTime(.35,audio.currentTime+.02); g.gain.exponentialRampToValueAtTime(.001,audio.currentTime+.6); o1.connect(g);o2.connect(g);g.connect(audio.destination); o1.start();o2.start();o1.stop(audio.currentTime+.65);o2.stop(audio.currentTime+.65); });
-  $("photo").addEventListener("click",()=>{ const a=document.createElement('a'); a.download='greenport-express.png'; a.href=renderer.domElement.toDataURL('image/png'); a.click(); });
+  document.getElementById('bell').addEventListener('click',()=>{ if(audio.state==='suspended') audio.resume(); dingSound(); });
 
-  // Resize
+  // ---------- Shooting ----------
+  const raycaster = new THREE.Raycaster();
+  const shootBtn = document.getElementById('shoot');
+  let canShoot = true, cooldown = 120; // ms
+
+  shootBtn.addEventListener('click', ()=> shoot());
+  function screenCenterRay(){
+    // direction = camera forward
+    const dir = new THREE.Vector3(); camera.getWorldDirection(dir);
+    raycaster.set(camera.position.clone(), dir.normalize());
+  }
+
+  // Score & combo
+  let score=0, hits=0, combo=1, lastHitTime=0;
+  const scoreEl = document.getElementById('score'), hitsEl=document.getElementById('hits'), comboEl=document.getElementById('combo');
+  function addScore(n, at){
+    const now = performance.now();
+    if(now - lastHitTime < 800) combo = Math.min(9, combo+1); else combo = 1;
+    lastHitTime = now;
+
+    const gain = Math.round(n * combo);
+    score += gain; hits += 1;
+    scoreEl.textContent = String(score); hitsEl.textContent = String(hits); comboEl.textContent = `x${combo}`;
+
+    // popup points
+    if(at){ popupPoints(`+${gain}`, at); }
+  }
+  function popupPoints(txt, worldPos){
+    const v = worldPos.clone().project(camera);
+    const sx = (v.x * 0.5 + 0.5) * renderer.domElement.clientWidth;
+    const sy = (-v.y * 0.5 + 0.5) * renderer.domElement.clientHeight + 44; // header offset
+    const p = document.createElement('div'); p.className='popup'; p.textContent = txt;
+    p.style.left = `${sx}px`; p.style.top = `${sy}px`; document.body.appendChild(p);
+    let a=1, y=0; const t=setInterval(()=>{ y-=1; a-=0.04; p.style.transform=`translate(-50%,-50%) translateY(${y}px)`; p.style.opacity=String(Math.max(0,a)); if(a<=0){ clearInterval(t); p.remove(); } }, 16);
+  }
+
+  function shoot(){
+    if(!canShoot) return;
+    canShoot = false; setTimeout(()=>canShoot=true, cooldown);
+    if(audio.state==='suspended') audio.resume();
+    popSound();
+
+    screenCenterRay();
+    const intersects = raycaster.intersectObjects(TARGETS.children, true);
+    if(intersects.length){
+      // find first alive parent target
+      let hitObj = intersects[0].object;
+      while(hitObj && !hitObj.userData.kind && hitObj.parent) hitObj = hitObj.parent;
+      if(hitObj && hitObj.userData.alive){
+        hitObj.userData.alive = false;
+        addScore(hitObj.userData.points || 50, hitObj.getWorldPosition(new THREE.Vector3()));
+        // fun vanish
+        const tw = { s:1, y:hitObj.position.y };
+        const fade = setInterval(()=>{ tw.s*=0.84; hitObj.scale.setScalar(tw.s); hitObj.position.y += 0.02; if(tw.s<0.15){ clearInterval(fade); TARGETS.remove(hitObj); } }, 16);
+      }
+    }
+  }
+
+  // ---------- Resize ----------
   function fit(){ const r=container.getBoundingClientRect(), w=Math.max(1,r.width), h=Math.max(1,r.height); camera.aspect=w/h; camera.updateProjectionMatrix(); renderer.setSize(w,h,false); }
   new ResizeObserver(fit).observe(container); fit();
 
-  // Game loop with **quaternion-based look**
-  const clock=new THREE.Clock(); let theta=0; let shells=0, pax=0, score=0;
-  const $score=()=>document.getElementById('score').textContent=score, $shells=()=>document.getElementById('shells').textContent=`${shells} / ${SHELL_CT}`, $pax=()=>document.getElementById('pax').textContent=pax;
-  $score(); $shells(); $pax();
-
+  // ---------- Animate ----------
+  const clock=new THREE.Clock(); let theta=0;
   function animate(){
     const dt=clock.getDelta();
-    const mph=parseFloat(document.getElementById('speed').value); document.getElementById('mph').textContent = String(mph);
-    const mps=(mph*1609.344)/3600; const angVel=mps/TRACK_RADIUS; theta += angVel*dt;
+    // Move train
+    mph = parseFloat(speedEl.value); mphEl.textContent = String(mph);
+    const mps=(mph*1609.344)/3600, angVel=mps/TRACK_RADIUS; theta += angVel*dt;
+    for(let i=0;i<CAR_CT;i++){ placeCar(cars[i], theta - i*ARC_SPACING); }
 
-    // move cars
-    for(let i=0;i<CAR_CT;i++) placeCar(cars[i], theta - i*ARC_SPACING);
-
-    // ride position (10 cars back)
+    // Camera ride (10 cars back) with yaw/pitch (quaternions)
     const rideAng = theta - (10*ARC_SPACING);
-    const pos = new THREE.Vector3(Math.cos(rideAng)*TRACK_RADIUS, eyeY, Math.sin(rideAng)*TRACK_RADIUS);
-
-    // smooth eye height
     eyeY += (targetEye - eyeY) * 0.12;
-    pos.y = eyeY + Math.sin(clock.elapsedTime*2.5)*0.015;
-
-    // base forward (along tangent)
+    const pos = new THREE.Vector3(Math.cos(rideAng)*TRACK_RADIUS, eyeY + Math.sin(clock.elapsedTime*2.5)*0.015, Math.sin(rideAng)*TRACK_RADIUS);
     const forward = new THREE.Vector3(-Math.sin(rideAng), 0, Math.cos(rideAng)).normalize();
     const up = new THREE.Vector3(0,1,0);
+    const baseQ = new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0,0,-1), forward);
+    const yawQ  = new THREE.Quaternion().setFromAxisAngle(up, THREE.MathUtils.degToRad(yawDeg));
+    const right = new THREE.Vector3().copy(forward).cross(up).normalize();
+    const pitchQ= new THREE.Quaternion().setFromAxisAngle(right, THREE.MathUtils.degToRad(pitchDeg));
+    camera.position.copy(pos); camera.quaternion.multiplyQuaternions(baseQ, yawQ).multiply(pitchQ);
 
-    // Build orientation: base -> yaw -> pitch  (QUATERNION method = reliable everywhere)
-    const baseQuat = new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0,0,-1), forward);
-    const yawQ   = new THREE.Quaternion().setFromAxisAngle(up, THREE.MathUtils.degToRad(yawDeg));
-    const right  = new THREE.Vector3().copy(forward).cross(up).normalize();
-    const pitchQ = new THREE.Quaternion().setFromAxisAngle(right, THREE.MathUtils.degToRad(pitchDeg));
-    const camQ   = new THREE.Quaternion().multiply(baseQuat).multiply(yawQ).multiply(pitchQ);
+    // Animate ferris a bit
+    ferris.rotation.z += 0.35*dt;
 
-    camera.position.copy(pos);
-    camera.quaternion.copy(camQ);
-
-    // animate bits
-    wheel.rotation.z += 0.35*dt;
-    if(nightGroup.visible){ beam.target.position.set(Math.cos(clock.elapsedTime*0.5)*40,6,Math.sin(clock.elapsedTime*0.5)*40); }
-
-    // collectibles near train
-    const trainPos = new THREE.Vector3(pos.x,0,pos.z);
-    shellsGroup.children.forEach(m=>{ if(m.visible && m.position.distanceTo(trainPos)<1.2){ m.visible=false; shells++; score+=50; $score(); $shells(); } });
-    stops.forEach(s=>{ const d=Math.abs(Math.atan2(Math.sin(rideAng-s.ang), Math.cos(rideAng-s.ang))); if(d<0.03 && mps>0.1){ pax++; score+=100; $score(); $pax(); s.ang += 0.8 + Math.random()*0.6; placeAround(s.group, s.ang, TRACK_RADIUS-2.2); } });
+    // Target idle motion
+    TARGETS.children.forEach(t=>{
+      if(!t.userData.alive) return;
+      t.userData.animT += dt;
+      if(t.userData.kind==='balloon'){
+        t.position.y = t.userData.baseY + Math.sin(t.userData.animT*1.6)*0.15;
+      } else if(t.userData.kind==='duck'){
+        t.position.x += Math.sin(t.userData.animT*0.8)*0.015;
+        t.position.z += Math.cos(t.userData.animT*0.8)*0.015;
+      } else if(t.userData.kind==='buoy'){
+        t.position.y = t.userData.baseY + Math.sin(t.userData.animT*1.2)*0.06;
+      } else if(t.userData.kind==='star'){
+        t.rotation.z += 0.8*dt;
+      }
+    });
 
     renderer.render(scene,camera);
     requestAnimationFrame(animate);
   }
   animate();
 
-  // small UI bits
-  const missions=['Pick up 6 passengers at the Carnival.','Collect 5 shells near the Harbor.','Finish a lap under 2:30 minutes.','Whistle at the Lighthouse and Skate Park.'];
-  function reroll(){ document.getElementById('mission').textContent = missions[Math.floor(Math.random()*missions.length)]; }
-  reroll(); document.getElementById('reroll').addEventListener('click', reroll);
-
-  setStatus('Use mouse/touch or arrows to look **up AND down**. Tall toggles eye height.');
+  setStatus('Aim with mouse/drag or arrows. Press Space or the Shoot! button to pop targets.');
 })();
 </script>
 </body>
