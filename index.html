@@ -3,11 +3,11 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Greenport Express — Pop & Play</title>
+<title>Greenport Express — Pop & Play (Crosshair + Smoke Trail)</title>
 <style>
   :root{--bg:#0b1220;--fg:#e5e7eb}
   html,body{height:100%;margin:0}
-  body{font:14px/1.45 system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;background:#0b1220;color:#e5e7eb}
+  body{font:14px/1.45 system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;background:#0b1220;color:#e5e7eb;cursor:crosshair}
   .wrap{position:fixed;inset:0;background:var(--bg);color:var(--fg)}
   .head{position:absolute;top:0;left:0;right:0;display:flex;align-items:center;justify-content:center;gap:12px;background:#fff;color:#0b1220;padding:10px 14px;box-shadow:0 10px 30px rgba(2,6,23,.12);z-index:3}
   .head h1{margin:0;font-size:18px}
@@ -22,23 +22,15 @@
   .range::-webkit-slider-thumb{-webkit-appearance:none;width:18px;height:18px;border-radius:50%;background:#0ea5e9;border:2px solid rgba(255,255,255,.9)}
   .hidden{display:none!important}
   #status{position:absolute;top:52px;left:12px;z-index:4;font-size:12px;color:#0369a1}
-
-  /* Scoreboard */
   .ribbon{position:absolute;top:52px;right:12px;z-index:4;background:rgba(255,255,255,.95);color:#0b1220;border-radius:12px;padding:10px 12px;box-shadow:0 10px 30px rgba(2,6,23,.15);min-width:220px}
   .row{display:flex;align-items:center;justify-content:space-between;margin:2px 0}
   .tag{padding:2px 8px;border-radius:999px;background:#e2e8f0;font-size:12px}
-
-  /* Crosshair */
-  .reticle{position:absolute;inset:44px 0 0 0;pointer-events:none;display:grid;place-items:center}
-  .reticle:after{content:"";width:22px;height:22px;border-radius:50%;border:2px solid rgba(255,255,255,.9);box-shadow:0 0 0 2px rgba(0,0,0,.2) inset}
-
-  /* On-screen look pad */
   .pad{position:absolute;right:14px;bottom:14px;z-index:3;display:grid;grid-template-columns:56px 56px 56px;grid-template-rows:56px 56px 56px;gap:8px}
   .pad button{appearance:none;border:0;border-radius:10px;background:rgba(255,255,255,.95);box-shadow:0 6px 18px rgba(2,6,23,.15);color:#0b1220;font-weight:700;cursor:pointer}
   .pad .blank{visibility:hidden}
-
-  /* Floating popup points */
   .popup{position:absolute;left:0;top:0;transform:translate(-50%,-50%);color:#16a34a;font-weight:700;text-shadow:0 2px 6px rgba(0,0,0,.35);pointer-events:none}
+  /* faint crosshair guide (optional, center dot) */
+  .centerDot{position:absolute;left:50%;top:calc(50% + 22px);width:6px;height:6px;background:#fff;border-radius:50%;transform:translate(-50%,-50%);opacity:.35;pointer-events:none}
 </style>
 </head>
 <body>
@@ -46,29 +38,25 @@
   <div class="head">
     <div class="headtoggle"><button id="toggleHeadline" class="ghost btn">Headline: On</button></div>
     <h1 id="headline">Greenport Express — Pop & Play</h1>
-    <span class="tag" style="background:#22c55e;color:#fff">Bubble/Confetti Blaster</span>
+    <span class="tag" style="background:#22c55e;color:#fff">Click or Space to Shoot</span>
   </div>
 
   <div id="status">Loading…</div>
   <div class="scene" id="scene"></div>
-  <div class="reticle" aria-hidden="true"></div>
+  <div class="centerDot" aria-hidden="true"></div>
 
-  <!-- Scoreboard -->
   <div class="ribbon">
     <div class="row"><strong>Score</strong><span id="score">0</span></div>
     <div class="row"><span class="tag">Combo</span><span id="combo">x1</span></div>
     <div class="row"><span class="tag">Hits</span><span id="hits">0</span></div>
   </div>
 
-  <!-- Controls -->
   <div class="hud">
     <div class="ctl">
       <label for="speed">Speed</label>
       <input id="speed" class="range" type="range" min="0" max="35" value="12" />
     </div>
     <div style="font-size:12px;color:#64748b"><strong id="mph">12</strong> mph</div>
-    <div class="sp"></div>
-    <button id="shoot" class="btn" title="Spacebar also shoots">Shoot!</button>
     <div class="sp"></div>
     <button id="whistle" class="btn ghost">Whistle</button>
     <button id="bell" class="btn ghost">Bell</button>
@@ -79,7 +67,7 @@
     <button id="photo" class="btn ghost">Photo</button>
   </div>
 
-  <!-- On‑screen look pad -->
+  <!-- optional on-screen look pad -->
   <div class="pad" aria-label="look controls">
     <span class="blank"></span><button id="padUp">↑</button><span class="blank"></span>
     <button id="padLeft">←</button><span class="blank"></span><button id="padRight">→</button>
@@ -87,7 +75,6 @@
   </div>
 </div>
 
-<!-- Local Three.js (put three.min.js next to this file) -->
 <script src="./three.min.js"></script>
 <script>
 (function(){
@@ -95,7 +82,7 @@
   if(!window.THREE){ setStatus('ERROR: three.min.js not found next to index.html'); return; }
   const THREE = window.THREE;
 
-  // ---------- Renderer & scene ----------
+  // ----- renderer / scene -----
   const container = document.getElementById('scene');
   const renderer = new THREE.WebGLRenderer({ antialias:true, preserveDrawingBuffer:true });
   renderer.setPixelRatio(Math.min(window.devicePixelRatio||1, 2));
@@ -103,12 +90,11 @@
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
-  renderer.toneMappingExposure = 1.0;
   container.appendChild(renderer.domElement);
 
   const scene = new THREE.Scene();
 
-  // Env
+  // env
   const pmrem = new THREE.PMREMGenerator(renderer);
   const envCanvas = document.createElement('canvas'); envCanvas.width=envCanvas.height=256;
   const eg = envCanvas.getContext('2d'); const grd = eg.createLinearGradient(0,0,0,256);
@@ -116,11 +102,11 @@
   const envTex = new THREE.CanvasTexture(envCanvas); envTex.colorSpace = THREE.SRGBColorSpace;
   scene.environment = pmrem.fromEquirectangular(envTex).texture; envTex.dispose();
 
-  // Camera
+  // camera (we'll compute quaternion per-frame from yaw/pitch + track forward)
   const camera = new THREE.PerspectiveCamera(72, 1, 0.05, 2500);
   scene.add(camera);
 
-  // Lights & night
+  // lights
   const hemi = new THREE.HemisphereLight(0xffffff, 0x2a3b2a, 0.6); scene.add(hemi);
   const sun = new THREE.DirectionalLight(0xffffff, 2.1); sun.position.set(90,140,60);
   sun.castShadow=true; sun.shadow.mapSize.set(2048,2048);
@@ -128,11 +114,11 @@
   sun.shadow.camera.left=-160; sun.shadow.camera.right=160; sun.shadow.camera.top=160; sun.shadow.camera.bottom=-160; scene.add(sun);
   const nightGroup = new THREE.Group(); nightGroup.visible=false; scene.add(nightGroup);
 
-  // Ground
+  // ground
   const ground = new THREE.Mesh(new THREE.CircleGeometry(900, 128), new THREE.MeshStandardMaterial({ color:0x98cfa7, roughness:0.95 }));
   ground.rotation.x = -Math.PI/2; ground.receiveShadow=true; scene.add(ground);
 
-  // Track
+  // track
   const TRACK_RADIUS=85, GAUGE=0.6;
   function CirclePath(r){ this.radius=r; } CirclePath.prototype = Object.create(THREE.Curve.prototype);
   CirclePath.prototype.getPoint=function(t){ const a=t*Math.PI*2; return new THREE.Vector3(Math.cos(a)*this.radius,0,Math.sin(a)*this.radius); };
@@ -144,7 +130,7 @@
                                  new THREE.MeshStandardMaterial({color:0x8e99a3, roughness:1}));
   ballast.geometry.rotateX(-Math.PI/2); ballast.receiveShadow=true; scene.add(ballast);
 
-  // Trees (fast)
+  // trees
   const trunkGeo=new THREE.CylinderGeometry(0.35,0.45,2.8,10);
   const trunkMat=new THREE.MeshStandardMaterial({color:0x6b4f2c,roughness:.95});
   const foliageMat=new THREE.MeshStandardMaterial({color:0x2f7a4a,roughness:.9,metalness:0,envMapIntensity:0.2});
@@ -158,12 +144,12 @@
   for(let i=0;i<900;i++){ const r=rnd(95,860), th=rnd(0,Math.PI*2); addTree(Math.cos(th)*r,Math.sin(th)*r,rnd(.6,1.25)); }
   for(let i=0;i<280;i++){ const r=rnd(110,280), th=rnd(0,Math.PI*2); if(Math.abs(r-TRACK_RADIUS)>12) addTree(Math.cos(th)*r,Math.sin(th)*r,rnd(.6,1.0)); }
 
-  // Ferris for flavor
+  // ferris for flavor
   const ferris=new THREE.Group(), wheelR=7;
   ferris.add(new THREE.Mesh(new THREE.TorusGeometry(wheelR,0.18,8,48), new THREE.MeshStandardMaterial({color:0xffffff, roughness:.4})));
   scene.add(ferris); ferris.position.set(TRACK_RADIUS+20,0,0);
 
-  // Train
+  // train cars (lightweight)
   const CAR_CT=24, CAR_SP=2.2;
   const carMat=new THREE.MeshStandardMaterial({ color:0xbfc5cc, metalness:.85, roughness:.35, envMapIntensity:1.5 });
   const train=new THREE.Group(), cars=[];
@@ -177,7 +163,7 @@
     car.position.set(x,0,z); car.rotation.y = Math.atan2(tx,tz);
   }
 
-  // ---------- Targets ----------
+  // targets
   const TARGETS = new THREE.Group(); scene.add(TARGETS);
   const targetDefs = [
     { kind:'balloon', color:0xff5d8f, radius:0.25, points:50 },
@@ -227,19 +213,22 @@
   }
   spawnTargets();
 
-  // ---------- Aiming ----------
+  // aiming / look
   let yawDeg=0, pitchDeg=0;
   const PITCH_MIN=-80, PITCH_MAX=80;
   let eyeY = 0.7, targetEye = 0.7; const SEATED=0.7, TALL=1.15;
 
-  // drag
+  // drag look
   (function attachDrag(){
     const el=renderer.domElement; let drag=false,lx=0,ly=0; const s=0.18;
     const P=e=>e.touches?{x:e.touches[0].clientX,y:e.touches[0].clientY}:{x:e.clientX,y:e.clientY};
     el.addEventListener('pointerdown',e=>{drag=true; const p=P(e); lx=p.x; ly=p.y; el.setPointerCapture?.(e.pointerId||0);});
     el.addEventListener('pointermove',e=>{ if(!drag) return; const p=P(e); const dx=p.x-lx, dy=p.y-ly; lx=p.x; ly=p.y; yawDeg+=dx*s; pitchDeg=Math.max(PITCH_MIN,Math.min(PITCH_MAX,pitchDeg-dy*s)); });
     const up=()=>{drag=false}; el.addEventListener('pointerup',up); el.addEventListener('pointerleave',up);
-    el.addEventListener('touchstart',e=>{} ,{passive:false}); el.addEventListener('touchmove',e=>{} ,{passive:false}); el.addEventListener('touchend',up);
+    el.addEventListener('touchstart',()=>{}, {passive:false}); el.addEventListener('touchmove',()=>{}, {passive:false}); el.addEventListener('touchend',up);
+    // CLICK TO SHOOT
+    el.addEventListener('click', ()=> shoot());
+    el.style.cursor='crosshair';
   })();
   // keys
   window.addEventListener('keydown',e=>{
@@ -248,15 +237,16 @@
     if(e.key==='ArrowRight') yawDeg+=step;
     if(e.key==='ArrowUp')    pitchDeg=Math.min(PITCH_MAX, pitchDeg+step);
     if(e.key==='ArrowDown')  pitchDeg=Math.max(PITCH_MIN, pitchDeg-step);
-    if(e.code==='Space'){ shoot(); }
+    if(e.code==='Space'){ e.preventDefault(); shoot(); }
   });
   // pad
   function hold(btn,fn){ let t=null; const start=ev=>{ev.preventDefault(); if(t) return; fn(); t=setInterval(fn,80)}; const stop=()=>{clearInterval(t);t=null};
+    ['padLeft','padRight','padUp','padDown'].forEach(id=>{ const b=document.getElementById(id); if(!b) return; });
     btn.addEventListener('pointerdown',start); btn.addEventListener('pointerup',stop); btn.addEventListener('pointerleave',stop); btn.addEventListener('pointercancel',stop); }
   hold(document.getElementById('padLeft'), ()=>{yawDeg-=4});  hold(document.getElementById('padRight'), ()=>{yawDeg+=4});
   hold(document.getElementById('padUp'),   ()=>{pitchDeg=Math.min(PITCH_MAX, pitchDeg+3)}); hold(document.getElementById('padDown'), ()=>{pitchDeg=Math.max(PITCH_MIN, pitchDeg-3)});
 
-  // Tall / center / night / headline / photo
+  // ui
   document.getElementById('tall').addEventListener('click',()=>{ targetEye = (targetEye===SEATED?TALL:SEATED); const on = targetEye===TALL; const b=document.getElementById('tall'); b.textContent=`Tall: ${on?'On':'Off'}`; b.classList.toggle('ghost', !on); });
   document.getElementById('center').addEventListener('click',()=>{ yawDeg=0; pitchDeg=0; });
   let isNight=false; function setNight(on){ isNight=on; nightGroup.visible=on; renderer.setClearColor(on?0x06101f:0xcfe8ff,1); hemi.intensity=on?.25:.6; sun.intensity=on?1.1:2.1; document.getElementById('dark').textContent = on? 'Day' : 'Night'; }
@@ -264,32 +254,22 @@
   let headOn=true; document.getElementById('toggleHeadline').addEventListener('click',()=>{ headOn=!headOn; document.getElementById('headline').classList.toggle('hidden',!headOn); document.getElementById('toggleHeadline').textContent=`Headline: ${headOn?'On':'Off'}`; });
   document.getElementById('photo').addEventListener('click',()=>{ const a=document.createElement('a'); a.download='greenport-express.png'; a.href=renderer.domElement.toDataURL('image/png'); a.click(); });
 
-  // Speed
+  // speed
   const speedEl = document.getElementById('speed'), mphEl = document.getElementById('mph');
   let mph = parseFloat(speedEl.value); mphEl.textContent = String(mph);
   speedEl.addEventListener('input',()=>{ mph=parseFloat(speedEl.value); mphEl.textContent=String(mph); });
 
-  // ---------- Audio ----------
+  // audio
   const audio = new (window.AudioContext||window.webkitAudioContext)();
-  function popSound(){
-    const o=audio.createOscillator(), g=audio.createGain();
-    o.type='triangle'; o.frequency.value= Math.random()*200 + 600;
-    g.gain.value=.0001; g.gain.exponentialRampToValueAtTime(.3,audio.currentTime+.02); g.gain.exponentialRampToValueAtTime(.0001,audio.currentTime+.2);
-    o.connect(g).connect(audio.destination); o.start(); o.stop(audio.currentTime+.22);
-  }
-  function dingSound(){
-    const o=audio.createOscillator(), g=audio.createGain();
-    o.type='sine'; o.frequency.value=880; g.gain.value=.0001;
-    g.gain.exponentialRampToValueAtTime(.25,audio.currentTime+.01); g.gain.exponentialRampToValueAtTime(.0001,audio.currentTime+.25);
-    o.connect(g).connect(audio.destination); o.start(); o.stop(audio.currentTime+.26);
-  }
+  function popSound(){ const o=audio.createOscillator(), g=audio.createGain(); o.type='triangle'; o.frequency.value= Math.random()*200 + 600; g.gain.value=.0001; g.gain.exponentialRampToValueAtTime(.3,audio.currentTime+.02); g.gain.exponentialRampToValueAtTime(.0001,audio.currentTime+.2); o.connect(g).connect(audio.destination); o.start(); o.stop(audio.currentTime+.22); }
+  function dingSound(){ const o=audio.createOscillator(), g=audio.createGain(); o.type='sine'; o.frequency.value=880; g.gain.value=.0001; g.gain.exponentialRampToValueAtTime(.25,audio.currentTime+.01); g.gain.exponentialRampToValueAtTime(.0001,audio.currentTime+.25); o.connect(g).connect(audio.destination); o.start(); o.stop(audio.currentTime+.26); }
   document.getElementById('whistle').addEventListener('click',()=>{ if(audio.state==='suspended') audio.resume(); const o=audio.createOscillator(),g=audio.createGain(); g.gain.value=.001;o.type='sine';
     o.frequency.setValueAtTime(720,audio.currentTime); o.frequency.exponentialRampToValueAtTime(1100,audio.currentTime+.35); o.frequency.exponentialRampToValueAtTime(680,audio.currentTime+.9);
     g.gain.exponentialRampToValueAtTime(.5,audio.currentTime+.04); g.gain.exponentialRampToValueAtTime(.32,audio.currentTime+.4); g.gain.exponentialRampToValueAtTime(.001,audio.currentTime+1.0);
     o.connect(g).connect(audio.destination); o.start(); o.stop(audio.currentTime+1.05); });
   document.getElementById('bell').addEventListener('click',()=>{ if(audio.state==='suspended') audio.resume(); dingSound(); });
 
-  // ---------- Score & UI popups ----------
+  // score / combo
   let score=0, hits=0, combo=1, lastHitTime=0;
   const scoreEl = document.getElementById('score'), hitsEl=document.getElementById('hits'), comboEl=document.getElementById('combo');
   function addScore(n, at){
@@ -310,35 +290,34 @@
     let a=1, y=0; const t=setInterval(()=>{ y-=1; a-=0.04; p.style.transform=`translate(-50%,-50%) translateY(${y}px)`; p.style.opacity=String(Math.max(0,a)); if(a<=0){ clearInterval(t); p.remove(); } }, 16);
   }
 
-  // ---------- Projectile system ----------
+  // projectiles + smoke trail + confetti
   const PROJECTILES = new THREE.Group(); scene.add(PROJECTILES);
-  const PARTICLES = new THREE.Group(); scene.add(PARTICLES);
+  const PARTICLES  = new THREE.Group(); scene.add(PARTICLES);
 
   function makeProjectile(){
     const g = new THREE.Group();
-    // core
     const core = new THREE.Mesh(new THREE.SphereGeometry(0.06, 10, 8),
       new THREE.MeshStandardMaterial({color:0x7dd3fc, emissive:0x66ccff, emissiveIntensity:0.8, roughness:.3, metalness:.2}));
-    // tiny ring flare
-    const ring = new THREE.Mesh(new THREE.TorusGeometry(0.09, 0.012, 6, 16),
-      new THREE.MeshStandardMaterial({color:0xffffff, emissive:0x88ddff, emissiveIntensity:0.7, roughness:.2}));
-    ring.rotation.x = Math.PI/2;
-    g.add(core, ring);
-    g.userData = { vel:new THREE.Vector3(), ttl:1.6 }; // seconds
+    g.add(core);
+    g.userData = { vel:new THREE.Vector3(), ttl:1.6, trailT:0 };
     return g;
   }
-
-  function muzzlePuff(origin, dir){
-    const puff = new THREE.Mesh(new THREE.SphereGeometry(0.08, 8, 6),
-      new THREE.MeshStandardMaterial({color:0xffffff, transparent:true, opacity:0.85, roughness:1}));
-    puff.position.copy(origin).addScaledVector(dir, 0.15);
-    scene.add(puff);
-    let s=1;
-    const it=setInterval(()=>{ s*=1.2; puff.scale.setScalar(s); puff.material.opacity*=0.8; if(puff.material.opacity<0.05){ clearInterval(it); scene.remove(puff); puff.geometry.dispose(); puff.material.dispose(); } }, 16);
+  function smokePuff(pos){
+    const sprite = new THREE.Sprite(new THREE.SpriteMaterial({color:0xffffff, opacity:0.6, transparent:true}));
+    sprite.position.copy(pos);
+    sprite.scale.setScalar(0.16);
+    sprite.userData = { ttl:0.7, grow:1.18 };
+    PARTICLES.add(sprite);
   }
-
-  function confettiBurst(at, baseColor=0xff66aa){
-    for(let i=0;i<26;i++){
+  function muzzlePuff(origin, dir){
+    const sprite = new THREE.Sprite(new THREE.SpriteMaterial({color:0xffffff, opacity:0.85, transparent:true}));
+    sprite.position.copy(origin).addScaledVector(dir, 0.12);
+    sprite.scale.setScalar(0.18);
+    sprite.userData = { ttl:0.25, grow:1.35 };
+    PARTICLES.add(sprite);
+  }
+  function confettiBurst(at){
+    for(let i=0;i<24;i++){
       const chip = new THREE.Mesh(new THREE.BoxGeometry(0.05,0.01,0.02),
         new THREE.MeshStandardMaterial({color:new THREE.Color().setHSL(Math.random(),0.7,0.6)}));
       chip.position.copy(at);
@@ -347,9 +326,9 @@
     }
   }
 
-  let canShoot=true; const cooldown=120; // ms
-  document.getElementById('shoot').addEventListener('click',()=>shoot());
-  window.addEventListener('keydown',e=>{ if(e.code==='Space') shoot(); });
+  let canShoot=true; const cooldown=120;
+  container.addEventListener('click', ()=> shoot()); // CLICK fires
+  window.addEventListener('keydown',e=>{ if(e.code==='Space'){ e.preventDefault(); shoot(); } });
 
   function shoot(){
     if(!canShoot) return;
@@ -357,14 +336,11 @@
     if(audio.state==='suspended') audio.resume();
     popSound();
 
-    // build firing transform from camera (forward with yaw/pitch already applied)
+    // fire from camera center (crosshair)
     const dir = new THREE.Vector3(); camera.getWorldDirection(dir).normalize();
     const start = camera.position.clone().addScaledVector(dir, 0.15);
-    const p = makeProjectile();
-    p.position.copy(start);
-    p.userData.vel.copy(dir).multiplyScalar(40); // m/s-ish; tweak for feel
+    const p = makeProjectile(); p.position.copy(start); p.userData.vel.copy(dir).multiplyScalar(40);
     PROJECTILES.add(p);
-
     muzzlePuff(start, dir);
   }
 
@@ -373,13 +349,11 @@
     target.userData.alive=false;
     addScore(target.userData.points||50, hitPos);
     dingSound();
-
-    // POP animation: quick scale, then vanish + confetti
+    // pop animation + confetti
     const startScale = target.scale.x || 1;
     let sc = startScale, steps=0;
-    const popIt = setInterval(()=>{ steps++; sc *= 1.16; target.scale.setScalar(sc); if(steps>6){ clearInterval(popIt); confettiBurst(hitPos, target.material?.color?.getHex?.()); TARGETS.remove(target); disposeDeep(target); } }, 16);
+    const popIt = setInterval(()=>{ steps++; sc *= 1.16; target.scale.setScalar(sc); if(steps>6){ clearInterval(popIt); confettiBurst(hitPos); TARGETS.remove(target); disposeDeep(target); } }, 16);
   }
-
   function disposeDeep(obj){
     obj.traverse(o=>{
       if(o.geometry) o.geometry.dispose();
@@ -389,21 +363,21 @@
     });
   }
 
-  // ---------- Resize ----------
+  // resize
   function fit(){ const r=container.getBoundingClientRect(), w=Math.max(1,r.width), h=Math.max(1,r.height); camera.aspect=w/h; camera.updateProjectionMatrix(); renderer.setSize(w,h,false); }
   new ResizeObserver(fit).observe(container); fit();
 
-  // ---------- Animate ----------
+  // animate
   const clock=new THREE.Clock(); let theta=0;
   function animate(){
     const dt=clock.getDelta();
 
-    // Move train
+    // move train
     mph = parseFloat(speedEl.value); mphEl.textContent = String(mph);
     const mps=(mph*1609.344)/3600, angVel=mps/TRACK_RADIUS; theta += angVel*dt;
     for(let i=0;i<CAR_CT;i++){ placeCar(cars[i], theta - i*ARC_SPACING); }
 
-    // Camera ride (10 cars back) with yaw/pitch (quaternions)
+    // camera ride with yaw/pitch (quaternion)
     const rideAng = theta - (10*ARC_SPACING);
     eyeY += (targetEye - eyeY) * 0.12;
     const pos = new THREE.Vector3(Math.cos(rideAng)*TRACK_RADIUS, eyeY + Math.sin(clock.elapsedTime*2.5)*0.015, Math.sin(rideAng)*TRACK_RADIUS);
@@ -415,10 +389,10 @@
     const pitchQ= new THREE.Quaternion().setFromAxisAngle(right, THREE.MathUtils.degToRad(pitchDeg));
     camera.position.copy(pos); camera.quaternion.multiplyQuaternions(baseQ, yawQ).multiply(pitchQ);
 
-    // Ferris motion
+    // ferris
     ferris.rotation.z += 0.35*dt;
 
-    // Target idle motion
+    // targets idle
     TARGETS.children.forEach(t=>{
       if(!t.userData.alive) return;
       t.userData.animT += dt;
@@ -434,38 +408,46 @@
       }
     });
 
-    // Update projectiles
+    // projectiles + smoke trail + collision
     for(let i=PROJECTILES.children.length-1;i>=0;i--){
       const pr = PROJECTILES.children[i];
       pr.position.addScaledVector(pr.userData.vel, dt);
       pr.userData.ttl -= dt;
-      pr.scale.multiplyScalar(0.995); // tiny fade
-      // collision check — simple sphere distance to target center
-      let hit=false, hitAt=null, hitTargetRef=null;
+      pr.userData.trailT += dt;
+      // drop smoke puffs along path ~every 0.02s
+      if(pr.userData.trailT > 0.02){
+        pr.userData.trailT = 0;
+        smokePuff(pr.position.clone());
+      }
+      // collision against targets (sphere hit)
+      let hit=false, where=null, tgt=null;
       for(let j=0;j<TARGETS.children.length;j++){
         const t = TARGETS.children[j];
         if(!t.userData.alive) continue;
-        const r = (t.userData.radius||0.28) + 0.07; // target radius + projectile radius
-        if(pr.position.distanceTo(t.getWorldPosition(new THREE.Vector3())) < r){
-          hit=true; hitTargetRef=t; hitAt=pr.position.clone(); break;
-        }
+        const r = (t.userData.radius||0.28) + 0.07;
+        const wp = t.getWorldPosition(new THREE.Vector3());
+        if(pr.position.distanceTo(wp) < r){ hit=true; tgt=t; where=pr.position.clone(); break; }
       }
-      if(hit){
-        PROJECTILES.remove(pr); disposeDeep(pr);
-        if(hitTargetRef) hitTarget(hitTargetRef, hitAt);
-        continue;
-      }
+      if(hit){ PROJECTILES.remove(pr); disposeDeep(pr); if(tgt) hitTarget(tgt, where); continue; }
       if(pr.userData.ttl<=0){ PROJECTILES.remove(pr); disposeDeep(pr); }
     }
 
-    // Update confetti particles
+    // particles (smoke/confetti)
     for(let i=PARTICLES.children.length-1;i>=0;i--){
       const c = PARTICLES.children[i];
-      c.userData.ttl -= dt;
-      c.userData.vel.y -= 2.5*dt; // gravity
-      c.position.addScaledVector(c.userData.vel, dt);
-      c.rotation.x += c.userData.rot.x*dt*6; c.rotation.y += c.userData.rot.y*dt*6; c.rotation.z += c.userData.rot.z*dt*6;
-      if(c.userData.ttl<=0){ PARTICLES.remove(c); disposeDeep(c); }
+      if(c.isSprite){
+        c.userData.ttl -= dt;
+        c.scale.multiplyScalar(1.05);
+        c.material.opacity *= 0.92;
+        c.position.y += 0.015; // drift up
+        if(c.userData.ttl<=0 || c.material.opacity<0.03){ PARTICLES.remove(c); c.material.dispose(); c.geometry?.dispose?.(); }
+      }else{
+        c.userData.ttl -= dt;
+        c.userData.vel.y -= 2.5*dt;
+        c.position.addScaledVector(c.userData.vel, dt);
+        c.rotation.x += c.userData.rot.x*dt*6; c.rotation.y += c.userData.rot.y*dt*6; c.rotation.z += c.userData.rot.z*dt*6;
+        if(c.userData.ttl<=0){ PARTICLES.remove(c); disposeDeep(c); }
+      }
     }
 
     renderer.render(scene,camera);
@@ -473,7 +455,7 @@
   }
   animate();
 
-  setStatus('Aim with mouse/drag or arrows. Press Space or “Shoot!” to fire. Targets POP with confetti when hit.');
+  setStatus('Aim the CROSSHAIR cursor. Click or press Space to shoot. Watch the smoke trail!');
 })();
 </script>
 </body>
