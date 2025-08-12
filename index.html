@@ -28,12 +28,11 @@
   .dark{--bg:#0b1220;--fg:#e5e7eb}
   #status{position:absolute;top:52px;left:12px;z-index:4;font-size:12px;color:#0369a1}
 
-  /* On-screen arrow pad (bottom-right) */
-  .pad{position:absolute;right:14px;bottom:14px;z-index:3;display:grid;
-       grid-template-columns:48px 48px 48px;grid-template-rows:48px 48px 48px;gap:8px}
+  /* Right-bottom look pad (only left/right active) */
+  .pad{position:absolute;right:14px;bottom:14px;z-index:3;display:flex;gap:8px}
   .pad button{appearance:none;border:0;border-radius:10px;background:rgba(255,255,255,.95);
-              box-shadow:0 6px 18px rgba(2,6,23,.15);color:#0b1220;font-weight:700;cursor:pointer}
-  .pad .blank{background:transparent;box-shadow:none}
+              box-shadow:0 6px 18px rgba(2,6,23,.15);color:#0b1220;font-weight:700;cursor:pointer;
+              width:56px;height:56px}
 </style>
 </head>
 <body>
@@ -57,20 +56,14 @@
     <button id="bell" class="btn ghost">Bell</button>
     <div class="sp"></div>
     <button id="dark" class="btn">Dark Mode</button>
+    <button id="tall" class="btn ghost" title="Toggle rider height">Tall: Off</button>
     <button id="center" class="btn ghost">Center View</button>
   </div>
 
-  <!-- Arrow pad for LOOK controls -->
+  <!-- On-screen look controls (left/right only) -->
   <div class="pad" aria-label="look controls">
-    <button class="blank" disabled></button>
-    <button id="padUp">↑</button>
-    <button class="blank" disabled></button>
     <button id="padLeft">←</button>
-    <button class="blank" disabled></button>
     <button id="padRight">→</button>
-    <button class="blank" disabled></button>
-    <button id="padDown">↓</button>
-    <button class="blank" disabled></button>
   </div>
 </div>
 
@@ -112,7 +105,7 @@
   // Camera rigs
   const camera = new THREE.PerspectiveCamera(72, 1, 0.05, 2000);
   const camYaw = new THREE.Object3D();
-  const camPitch = new THREE.Object3D();
+  const camPitch = new THREE.Object3D(); // we keep this flat (no pitch look)
   camYaw.add(camPitch); camPitch.add(camera);
   scene.add(camYaw);
 
@@ -133,7 +126,7 @@
   );
   ground.rotation.x = -Math.PI/2; ground.receiveShadow = true; scene.add(ground);
 
-  // Track (correct tangent)
+  // Track
   const TRACK_RADIUS = 60, GAUGE = 0.6;
   function CirclePath(r){ this.radius=r; }
   CirclePath.prototype = Object.create(THREE.Curve.prototype);
@@ -167,7 +160,7 @@
   }
   ties.castShadow = ties.receiveShadow = true; scene.add(ties);
 
-  // Trees (layered cones + varied hue)
+  // Trees
   const trunkGeo = new THREE.CylinderGeometry(0.35,0.45,2.6, 10);
   const trunkMat = new THREE.MeshStandardMaterial({ color:0x6b4f2c, roughness:.95 });
   const foliageMat = new THREE.MeshStandardMaterial({ color:0x2f7a4a, roughness:.9, metalness:0, envMapIntensity:0.2 });
@@ -183,7 +176,7 @@
   for(let i=0;i<600;i++){ const r=rand(70,500), th=rand(0,Math.PI*2); addTree(Math.cos(th)*r, Math.sin(th)*r, rand(.7,1.3)); }
   for(let i=0;i<220;i++){ const r=rand(82,240), th=rand(0,Math.PI*2); if(Math.abs(r-TRACK_RADIUS)>10) addTree(Math.cos(th)*r, Math.sin(th)*r, rand(.6,1.1)); }
 
-  // Cars + kids
+  // Cars + kids with faces
   const CAR_COUNT = 24;
   const CAR_SPACING = 2.2;
   const CAR_LEN = 1.8, CAR_W = 1.2, CAR_H = 0.7;
@@ -207,20 +200,55 @@
     coupler.position.x = CAR_LEN/2 + 0.1; g.add(coupler);
     return g;
   }
+
+  // Shared tiny geometries/materials for faces (perf-friendly)
+  const geoHead = new THREE.SphereGeometry(0.18, 16, 12);
+  const matSkin = new THREE.MeshStandardMaterial({color:0xffd6b0, roughness:.6});
+  const geoEye = new THREE.SphereGeometry(0.03, 10, 8);
+  const matEye = new THREE.MeshStandardMaterial({color:0x111111, roughness:.5, metalness:0.1});
+  const geoMouth = new THREE.CylinderGeometry(0.055, 0.055, 0.02, 16);
+  const matMouth = new THREE.MeshStandardMaterial({color:0x843434, roughness:.6});
+  const geoHairCapTop = new THREE.SphereGeometry(0.20, 16, 12);
+  const geoHairBand = new THREE.CylinderGeometry(0.205, 0.205, 0.06, 16);
+
   function makeKidHead(){
-    const group = new THREE.Group();
-    const skin = new THREE.Mesh(new THREE.SphereGeometry(0.18, 16, 12), new THREE.MeshStandardMaterial({color:0xffd6b0, roughness:.6}));
-    skin.position.y = 0.18;
-    const capCol = new THREE.Color().setHSL(Math.random(), 0.6, 0.45);
-    const cap = new THREE.Mesh(new THREE.CylinderGeometry(0.2,0.22,0.1,12), new THREE.MeshStandardMaterial({color:capCol, roughness:.7}));
-    cap.position.y = 0.33;
-    group.add(skin, cap);
-    return group;
+    const g = new THREE.Group();
+
+    // Head
+    const head = new THREE.Mesh(geoHead, matSkin);
+    head.position.y = 0.18;
+    g.add(head);
+
+    // Eyes
+    const eyeL = new THREE.Mesh(geoEye, matEye);
+    const eyeR = eyeL.clone();
+    eyeL.position.set(-0.055, 0.21, 0.16);
+    eyeR.position.set( 0.055, 0.21, 0.16);
+    g.add(eyeL, eyeR);
+
+    // Mouth (little cylinder flattened & rotated)
+    const mouth = new THREE.Mesh(geoMouth, matMouth);
+    mouth.rotation.x = Math.PI/2;
+    mouth.scale.set(1.0, 0.65, 1.0);
+    mouth.position.set(0, 0.13, 0.17);
+    g.add(mouth);
+
+    // Hair (random color)
+    const hairColor = new THREE.Color().setHSL(Math.random()*0.12+0.05, 0.5, 0.25); // brownish range
+    const matHair = new THREE.MeshStandardMaterial({color:hairColor, roughness:.8, metalness:0.05});
+    const cap = new THREE.Mesh(geoHairCapTop, matHair);
+    cap.scale.y = 0.6; // flatten to cap
+    cap.position.y = 0.30;
+    const band = new THREE.Mesh(geoHairBand, matHair);
+    band.position.y = 0.25;
+    g.add(cap, band);
+
+    return g;
   }
 
   const train = new THREE.Group();
   const cars = [];
-  for(let i=0;i<CAR_COUNT;i++){
+  for(let i=0;i<24;i++){
     const car = makeCoalCar();
     const k1 = makeKidHead(); k1.position.set(-0.3, 0.45,  0.22);
     const k2 = makeKidHead(); k2.position.set( 0.25, 0.45, -0.18);
@@ -231,6 +259,7 @@
 
   // Helpers
   const ANGLE_PER_M = 1 / TRACK_RADIUS;           // rad per meter
+  const CAR_SPACING = 2.2;
   const ARC_SPACING = CAR_SPACING * ANGLE_PER_M;  // rad between cars
   function placeCar(car, angle){
     const x = Math.cos(angle) * TRACK_RADIUS;
@@ -240,39 +269,42 @@
     car.rotation.y = Math.atan2(tx, tz);
   }
 
-  // Camera ride params
+  // Camera ride params — with Tall toggle
   const CAMERA_CAR_INDEX = 10;
   let yawDeg = 0;
-  let pitchDeg = -3; // slight look down by default
-  const clamp = (v,a,b)=>Math.max(a,Math.min(b,v));
-  const PITCH_MIN = -35, PITCH_MAX = 25; // keep comfortable range
+  let targetEye = 0.62;         // seated height
+  const SEATED = 0.62, TALL = 1.02;
+  let isTall = false;
 
   function updateCamera(rideAng, time){
     const cx = Math.cos(rideAng) * TRACK_RADIUS;
     const cz = Math.sin(rideAng) * TRACK_RADIUS;
     const tx = -Math.sin(rideAng), tz = Math.cos(rideAng);
     const tangentY = Math.atan2(tx, tz);
-    camYaw.position.set(cx, 0.62 + Math.sin(time*2.5)*0.015, cz); // tiny bob
+
+    // smooth eye height to target
+    const curY = camYaw.position.y || SEATED;
+    const newY = curY + (targetEye - curY) * 0.12;
+
+    camYaw.position.set(cx, newY + Math.sin(time*2.5)*0.015, cz); // tiny bob
     camYaw.rotation.y = tangentY + THREE.MathUtils.degToRad(yawDeg);
-    camPitch.rotation.x = THREE.MathUtils.degToRad(clamp(pitchDeg, PITCH_MIN, PITCH_MAX));
+    camPitch.rotation.x = 0; // lock pitch so you can't look up/down
     camera.position.set(0,0,0);
   }
 
-  // UI + speed slider
+  // UI
   const $ = id=>document.getElementById(id);
   let mph = parseFloat($("speed").value);
   $("mph").textContent = String(mph);
   $("speed").addEventListener("input", ()=>{ mph=parseFloat($("speed").value); $("mph").textContent=String(mph); });
 
-  // LOOK controls — keyboard arrows
+  // Look controls — keyboard (left/right ONLY)
   window.addEventListener("keydown", (e)=>{
     if(e.key === "ArrowLeft"){  yawDeg -= 4; }
     if(e.key === "ArrowRight"){ yawDeg += 4; }
-    if(e.key === "ArrowUp"){    pitchDeg = clamp(pitchDeg + 3, PITCH_MIN, PITCH_MAX); }
-    if(e.key === "ArrowDown"){  pitchDeg = clamp(pitchDeg - 3, PITCH_MIN, PITCH_MAX); }
   });
 
-  // On‑screen arrow pad (press‑and‑hold)
+  // On‑screen look buttons (press‑and‑hold)
   function hold(btn, onTick){
     let t=null;
     const start=(ev)=>{ ev.preventDefault(); if(t) return; onTick(); t=setInterval(onTick, 80); };
@@ -284,8 +316,14 @@
   }
   hold($("padLeft"),  ()=>{ yawDeg -= 4; });
   hold($("padRight"), ()=>{ yawDeg += 4; });
-  hold($("padUp"),    ()=>{ pitchDeg = clamp(pitchDeg + 3, PITCH_MIN, PITCH_MAX); });
-  hold($("padDown"),  ()=>{ pitchDeg = clamp(pitchDeg - 3, PITCH_MIN, PITCH_MAX); });
+
+  // Tall toggle
+  $("tall").addEventListener("click", ()=>{
+    isTall = !isTall;
+    targetEye = isTall ? TALL : SEATED;
+    $("tall").textContent = `Tall: ${isTall ? "On" : "Off"}`;
+    $("tall").classList.toggle("ghost", !isTall);
+  });
 
   // Audio
   const audio = new (window.AudioContext||window.webkitAudioContext)();
@@ -350,13 +388,13 @@
     theta += angVel * dt;
 
     // place cars (front at theta)
-    for(let i=0;i<CAR_COUNT;i++){
-      const ang = theta - i * ARC_SPACING;
+    for(let i=0;i<cars.length;i++){
+      const ang = theta - i * (CAR_SPACING * ANGLE_PER_M);
       placeCar(cars[i], ang);
     }
 
     // camera ride (~10 cars back)
-    const rideAng = theta - (10 * ARC_SPACING);
+    const rideAng = theta - (10 * (CAR_SPACING * ANGLE_PER_M));
     updateCamera(rideAng, clock.elapsedTime);
 
     renderer.render(scene, camera);
@@ -364,7 +402,7 @@
   }
   animate();
 
-  log("Arrows = look (L/R/U/D). Speed on slider.");
+  log("Look: ← → | Tall toggles eye height | Speed on slider");
 })();
 </script>
 </body>
