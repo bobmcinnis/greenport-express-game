@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Greenport Express — Ride in the Coal Cars</title>
+<title>Greenport Express — Ride 10 Cars Back</title>
 <style>
   :root{--bg:#0b1220;--fg:#e5e7eb}
   html,body{height:100%;margin:0}
@@ -27,6 +27,8 @@
   .hidden{display:none!important}
   .dark{--bg:#0b1220;--fg:#e5e7eb}
   #status{position:absolute;top:52px;left:12px;z-index:4;font-size:12px;color:#0369a1}
+  .hint{position:absolute;right:12px;bottom:12px;z-index:3;font-size:12px;color:#334155;background:rgba(255,255,255,.8);
+        padding:6px 8px;border-radius:8px}
 </style>
 </head>
 <body>
@@ -49,9 +51,9 @@
     <button id="bell" class="btn ghost">Bell</button>
     <div class="sp"></div>
     <button id="dark" class="btn">Dark Mode</button>
-    <button id="look" class="btn ghost">Look Around</button>
     <button id="center" class="btn ghost">Center View</button>
   </div>
+  <div class="hint">Use ← → to look | ↑ ↓ to change speed</div>
 </div>
 
 <!-- Local Three.js (no CDNs) -->
@@ -69,50 +71,76 @@
   const renderer = new THREE.WebGLRenderer({ antialias:true });
   renderer.setPixelRatio(Math.min(window.devicePixelRatio||1, 2));
   renderer.shadowMap.enabled = true;
+  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  renderer.outputColorSpace = THREE.SRGBColorSpace;
+  renderer.toneMapping = THREE.ACESFilmicToneMapping;
+  renderer.toneMappingExposure = 1.0;
   container.appendChild(renderer.domElement);
 
   const scene = new THREE.Scene();
-  scene.fog = new THREE.FogExp2(0xcfe8ff, 0.0045);
 
+  // Simple procedural environment map for PBR reflections
+  const pmrem = new THREE.PMREMGenerator(renderer);
+  const envCanvas = document.createElement('canvas');
+  envCanvas.width = envCanvas.height = 256;
+  const eg = envCanvas.getContext('2d');
+  const grd = eg.createLinearGradient(0,0,0,256);
+  grd.addColorStop(0,'#cfe8ff'); grd.addColorStop(1,'#9fc3ff');
+  eg.fillStyle = grd; eg.fillRect(0,0,256,256);
+  const envTex = new THREE.CanvasTexture(envCanvas);
+  envTex.colorSpace = THREE.SRGBColorSpace;
+  const envRT = pmrem.fromEquirectangular(envTex);
+  scene.environment = envRT.texture;
+  envTex.dispose();
+
+  // Camera + rigs (yaw/pitch)
   const camera = new THREE.PerspectiveCamera(72, 1, 0.05, 2000);
+  const camYaw = new THREE.Object3D();
+  const camPitch = new THREE.Object3D();
+  camYaw.add(camPitch); camPitch.add(camera);
+  scene.add(camYaw);
 
-  // Lights
-  const hemi = new THREE.HemisphereLight(0xe8f7ff, 0x274a2c, 0.7); scene.add(hemi);
-  const sun = new THREE.DirectionalLight(0xffffff, 1.1);
-  sun.position.set(60,80,40); sun.castShadow=true; sun.shadow.mapSize.set(2048,2048);
+  // Lighting (physically plausible)
+  const hemi = new THREE.HemisphereLight(0xffffff, 0x2a3b2a, 0.5); scene.add(hemi);
+  const sun = new THREE.DirectionalLight(0xffffff, 2.0);
+  sun.position.set(80,120,60);
+  sun.castShadow=true; sun.shadow.mapSize.set(2048,2048);
+  sun.shadow.camera.near=1; sun.shadow.camera.far=400;
+  sun.shadow.camera.left=-120; sun.shadow.camera.right=120;
+  sun.shadow.camera.top=120; sun.shadow.camera.bottom=-120;
   scene.add(sun);
 
-  // Ground
+  // Ground (subtle color variation)
   const ground = new THREE.Mesh(
-    new THREE.CircleGeometry(520,96),
-    new THREE.MeshPhongMaterial({ color: 0xbfe7c1 })
+    new THREE.CircleGeometry(520, 128),
+    new THREE.MeshStandardMaterial({ color:0xa8d2b4, roughness:0.95 })
   );
   ground.rotation.x = -Math.PI/2; ground.receiveShadow = true; scene.add(ground);
 
   // Track
-  const TRACK_RADIUS = 60, GAUGE = 0.6; // miniature gauge wider look
+  const TRACK_RADIUS = 60, GAUGE = 0.6;
   function CirclePath(r){ this.radius=r; }
   CirclePath.prototype = Object.create(THREE.Curve.prototype);
   CirclePath.prototype.getPoint=function(t){ const a=t*Math.PI*2; return new THREE.Vector3(Math.cos(a)*this.radius,0,Math.sin(a)*this.radius); };
 
-  const RAIL_R = 0.06;
-  const railMat = new THREE.MeshStandardMaterial({ color:0x8a8f99, metalness:.9, roughness:.25 });
-  const innerRail = new THREE.Mesh(new THREE.TubeGeometry(new CirclePath(TRACK_RADIUS-GAUGE/2), 560, RAIL_R, 12, true), railMat);
-  const outerRail = new THREE.Mesh(new THREE.TubeGeometry(new CirclePath(TRACK_RADIUS+GAUGE/2), 560, RAIL_R, 12, true), railMat);
+  const railMat = new THREE.MeshStandardMaterial({ color:0x7e8790, metalness:1.0, roughness:0.25, envMapIntensity:1.2 });
+  const RAIL_R = 0.05;
+  const innerRail = new THREE.Mesh(new THREE.TubeGeometry(new CirclePath(TRACK_RADIUS-GAUGE/2), 640, RAIL_R, 16, true), railMat);
+  const outerRail = new THREE.Mesh(new THREE.TubeGeometry(new CirclePath(TRACK_RADIUS+GAUGE/2), 640, RAIL_R, 16, true), railMat);
   innerRail.castShadow = outerRail.castShadow = true;
   innerRail.receiveShadow = outerRail.receiveShadow = true;
   scene.add(innerRail, outerRail);
 
   const ballast = new THREE.Mesh(
-    new THREE.RingGeometry(TRACK_RADIUS-GAUGE/2-1.2, TRACK_RADIUS+GAUGE/2+1.2, 160),
+    new THREE.RingGeometry(TRACK_RADIUS-GAUGE/2-1.1, TRACK_RADIUS+GAUGE/2+1.1, 160),
     new THREE.MeshStandardMaterial({ color:0x8e99a3, roughness:1 })
   );
   ballast.geometry.rotateX(-Math.PI/2); ballast.receiveShadow = true; scene.add(ballast);
 
   // Ties
-  const TIE_CT = 420, TIE_W = GAUGE + 0.5, TIE_H = 0.14, TIE_D = 0.28;
+  const TIE_CT = 500, TIE_W = GAUGE + 0.5, TIE_H = 0.14, TIE_D = 0.28;
   const tieGeo = new THREE.BoxGeometry(TIE_W, TIE_H, TIE_D);
-  const tieMat = new THREE.MeshStandardMaterial({ color:0x7b5e3b, roughness:.9 });
+  const tieMat = new THREE.MeshStandardMaterial({ color:0x7b5e3b, roughness:.95 });
   const ties = new THREE.InstancedMesh(tieGeo, tieMat, TIE_CT);
   const m4 = new THREE.Matrix4(), q = new THREE.Quaternion();
   for(let i=0;i<TIE_CT;i++){
@@ -123,41 +151,55 @@
   }
   ties.castShadow = ties.receiveShadow = true; scene.add(ties);
 
-  // Silver coal cars (open, small)
-  const CAR_COUNT = 22;               // long train
-  const CAR_SPACING = 2.2;            // distance along the arc
+  // More realistic-ish trees (instanced trunks + layered foliage with slight color variation)
+  const trunkGeo = new THREE.CylinderGeometry(0.35,0.45,2.6, 10);
+  const trunkMat = new THREE.MeshStandardMaterial({ color:0x6b4f2c, roughness:.95 });
+  const foliageMat = new THREE.MeshStandardMaterial({ color:0x2f7a4a, roughness:.9, metalness:0, envMapIntensity:0.2 });
+  function addTree(x,z,s){
+    const trunk = new THREE.Mesh(trunkGeo, trunkMat); trunk.scale.set(s,s,s);
+    trunk.position.set(x,1.3*s,z); trunk.castShadow=trunk.receiveShadow=true; scene.add(trunk);
+    const c1=new THREE.Mesh(new THREE.ConeGeometry(1.7*s,3.0*s, 10), foliageMat); c1.position.set(x,3.0*s,z); c1.castShadow=true;
+    const c2=new THREE.Mesh(new THREE.ConeGeometry(1.4*s,2.6*s, 10), foliageMat); c2.position.set(x,4.4*s,z); c2.castShadow=true;
+    const c3=new THREE.Mesh(new THREE.ConeGeometry(1.1*s,2.2*s, 10), foliageMat); c3.position.set(x,5.6*s,z); c3.castShadow=true;
+    scene.add(c1,c2,c3);
+  }
+  const rand=(a,b)=>a+Math.random()*(b-a);
+  for(let i=0;i<600;i++){ const r=rand(70,500), th=rand(0,Math.PI*2); addTree(Math.cos(th)*r, Math.sin(th)*r, rand(.7,1.3)); }
+  for(let i=0;i<220;i++){ const r=rand(82,240), th=rand(0,Math.PI*2); if(Math.abs(r-TRACK_RADIUS)>10) addTree(Math.cos(th)*r, Math.sin(th)*r, rand(.6,1.1)); }
+
+  // Silver coal cars (PBR feel)
+  const CAR_COUNT = 24;
+  const CAR_SPACING = 2.2;
   const CAR_LEN = 1.8, CAR_W = 1.2, CAR_H = 0.7;
-  const carMat = new THREE.MeshStandardMaterial({ color:0xbfc5cc, metalness:.7, roughness:.35 });
+  const carMat = new THREE.MeshStandardMaterial({ color:0xbfc5cc, metalness:.85, roughness:.35, envMapIntensity:1.5 });
 
   function makeCoalCar(){
     const g = new THREE.Group();
-    // tub
     const shell = new THREE.Mesh(new THREE.BoxGeometry(CAR_LEN, CAR_H, CAR_W), carMat);
-    shell.castShadow = true; shell.receiveShadow = true;
+    shell.castShadow = shell.receiveShadow = true;
     g.add(shell);
-    // open top illusion: inner darker box slightly smaller to hint walls
     const inner = new THREE.Mesh(new THREE.BoxGeometry(CAR_LEN*0.96, CAR_H*0.6, CAR_W*0.96),
-      new THREE.MeshStandardMaterial({ color:0xadb3ba, metalness:.2, roughness:.8 }));
-    inner.position.y = 0.05; g.add(inner);
-    // simple wheelsets
-    const wheel = ()=>{ const w=new THREE.Mesh(new THREE.CylinderGeometry(0.22,0.22,0.28,14), new THREE.MeshStandardMaterial({color:0x333,metalness:.4,roughness:.6})); w.rotation.z=Math.PI/2; w.castShadow=true; return w; };
+      new THREE.MeshStandardMaterial({ color:0xaeb4bb, metalness:.2, roughness:.9 }));
+    inner.position.y = 0.05; inner.receiveShadow=true; g.add(inner);
+    const wheelMat = new THREE.MeshStandardMaterial({ color:0x2d2f33, metalness:.5, roughness:.5, envMapIntensity:.6 });
+    const wheel = ()=>{ const w=new THREE.Mesh(new THREE.CylinderGeometry(0.22,0.22,0.28,16), wheelMat); w.rotation.z=Math.PI/2; w.castShadow=true; return w; };
     const w1=wheel(); w1.position.set(-0.6,-0.42, 0.55);
     const w2=wheel(); w2.position.set(-0.6,-0.42,-0.55);
     const w3=wheel(); w3.position.set( 0.6,-0.42, 0.55);
     const w4=wheel(); w4.position.set( 0.6,-0.42,-0.55);
     g.add(w1,w2,w3,w4);
-    // coupler nub
-    const coupler = new THREE.Mesh(new THREE.BoxGeometry(0.2,0.1,0.1), new THREE.MeshStandardMaterial({color:0x444}));
+    const coupler = new THREE.Mesh(new THREE.BoxGeometry(0.2,0.1,0.1), new THREE.MeshStandardMaterial({color:0x444, roughness:.7}));
     coupler.position.x = CAR_LEN/2 + 0.1; g.add(coupler);
     return g;
   }
 
-  // “Kid heads” — simple low‑poly spheres + caps (generic, not identifiable)
+  // “Kid heads” (generic)
   function makeKidHead(){
     const group = new THREE.Group();
-    const skin = new THREE.Mesh(new THREE.SphereGeometry(0.18, 12, 10), new THREE.MeshStandardMaterial({color:0xffd6b0, roughness:.6}));
+    const skin = new THREE.Mesh(new THREE.SphereGeometry(0.18, 16, 12), new THREE.MeshStandardMaterial({color:0xffd6b0, roughness:.6}));
     skin.position.y = 0.18;
-    const cap = new THREE.Mesh(new THREE.CylinderGeometry(0.2,0.22,0.1,10), new THREE.MeshStandardMaterial({color:0x2563eb, metalness:.1, roughness:.8}));
+    const capCol = new THREE.Color().setHSL(Math.random(), 0.6, 0.45);
+    const cap = new THREE.Mesh(new THREE.CylinderGeometry(0.2,0.22,0.1,12), new THREE.MeshStandardMaterial({color:capCol, roughness:.7}));
     cap.position.y = 0.33;
     group.add(skin, cap);
     return group;
@@ -167,7 +209,6 @@
   const cars = [];
   for(let i=0;i<CAR_COUNT;i++){
     const car = makeCoalCar();
-    // 2 kids per car (varied offsets)
     const k1 = makeKidHead(); k1.position.set(-0.3, 0.45,  0.22);
     const k2 = makeKidHead(); k2.position.set( 0.25, 0.45, -0.18);
     car.add(k1,k2);
@@ -176,59 +217,43 @@
   }
   scene.add(train);
 
-  // Forest
-  const addTree=(x,z,s=1)=>{
-    const trunk=new THREE.Mesh(new THREE.CylinderGeometry(.35*s,.45*s,2.6*s,8), new THREE.MeshStandardMaterial({color:0x6b4f2c}));
-    trunk.position.set(x,1.3*s,z); trunk.castShadow=trunk.receiveShadow=true; scene.add(trunk);
-    const mat=new THREE.MeshStandardMaterial({color:0x2a7a3b,roughness:.9});
-    const c1=new THREE.Mesh(new THREE.ConeGeometry(1.7*s,3.0*s,8),mat); c1.position.set(x,3.0*s,z); c1.castShadow=true;
-    const c2=new THREE.Mesh(new THREE.ConeGeometry(1.4*s,2.6*s,8),mat); c2.position.set(x,4.4*s,z); c2.castShadow=true;
-    scene.add(c1,c2);
-  };
-  const rand=(a,b)=>a+Math.random()*(b-a);
-  for(let i=0;i<500;i++){ const r=rand(70,480), th=rand(0,Math.PI*2); addTree(Math.cos(th)*r, Math.sin(th)*r, rand(.7,1.3)); }
-  for(let i=0;i<180;i++){ const r=rand(82,240), th=rand(0,Math.PI*2); if(Math.abs(r-TRACK_RADIUS)>10) addTree(Math.cos(th)*r, Math.sin(th)*r, rand(.6,1.1)); }
-
-  // Arrange cars around the circular path with spacing
-  // We'll parameterize by an angle offset for each car, and advance a global theta.
-  const ANGLE_PER_M = 1 / TRACK_RADIUS; // rad per meter approx
-  const ARC_SPACING = CAR_SPACING * ANGLE_PER_M; // rad between car centers
+  // Place cars on circular path
+  const ANGLE_PER_M = 1 / TRACK_RADIUS; // rad per meter
+  const ARC_SPACING = CAR_SPACING * ANGLE_PER_M;
   function placeCar(car, angle){
     const x = Math.cos(angle) * TRACK_RADIUS;
     const z = Math.sin(angle) * TRACK_RADIUS;
     car.position.set(x, 0, z);
-    car.rotation.y = Math.atan2(Math.cos(angle), -Math.sin(angle)); // tangent
+    car.rotation.y = Math.atan2(Math.cos(angle), -Math.sin(angle));
   }
 
-  // Camera: ride ~10 cars back
-  const CAMERA_CAR_INDEX = 10; // 0 = front car
-  const cameraRigYaw = new THREE.Object3D();
-  const cameraRigPitch = new THREE.Object3D();
-  cameraRigYaw.add(cameraRigPitch); cameraRigPitch.add(camera);
-  scene.add(cameraRigYaw);
-
-  // Pointer‑lock look around
+  // Camera: ride ~10 cars back, with a bit of head bob for realism
+  const CAMERA_CAR_INDEX = 10;
   let yawDeg = 0, pitchDeg = 0;
-  const clamp = (v,a,b)=>Math.max(a,Math.min(b,v));
-  function onMouseMove(e){
-    if (document.pointerLockElement !== renderer.domElement) return;
-    yawDeg += e.movementX * 0.08;
-    pitchDeg -= e.movementY * 0.08;
-    pitchDeg = clamp(pitchDeg, -60, 60);
-    cameraRigYaw.rotation.y = THREE.MathUtils.degToRad(yawDeg);
-    cameraRigPitch.rotation.x = THREE.MathUtils.degToRad(pitchDeg);
+  function updateCamera(rideAng, time){
+    const cx = Math.cos(rideAng) * TRACK_RADIUS;
+    const cz = Math.sin(rideAng) * TRACK_RADIUS;
+    const tangentY = Math.atan2(Math.cos(rideAng), -Math.sin(rideAng));
+    camYaw.position.set(cx, 0.62 + Math.sin(time*2.5)*0.015, cz); // slight bob
+    camYaw.rotation.y = tangentY + THREE.MathUtils.degToRad(yawDeg);
+    camPitch.rotation.x = THREE.MathUtils.degToRad(pitchDeg);
+    camera.position.set(0,0,0);
   }
-  renderer.domElement.addEventListener("mousemove", onMouseMove);
-  document.getElementById("look").addEventListener("click", ()=>{ if(renderer.domElement.requestPointerLock) renderer.domElement.requestPointerLock(); });
-  document.getElementById("center").addEventListener("click", ()=>{ yawDeg=pitchDeg=0; cameraRigYaw.rotation.y=0; cameraRigPitch.rotation.x=0; });
 
-  // UI
+  // UI wiring + arrow keys (Left/Right = look, Up/Down = speed)
   const $ = id=>document.getElementById(id);
   let mph = parseFloat($("speed").value);
   $("mph").textContent = String(mph);
   $("speed").addEventListener("input", ()=>{ mph=parseFloat($("speed").value); $("mph").textContent=String(mph); });
 
-  // Audio: whistle + bell
+  window.addEventListener("keydown", (e)=>{
+    if(e.key === "ArrowLeft"){ yawDeg -= 4; }
+    if(e.key === "ArrowRight"){ yawDeg += 4; }
+    if(e.key === "ArrowUp"){ mph = Math.min(35, mph+1); $("speed").value = String(mph); $("mph").textContent=String(mph); }
+    if(e.key === "ArrowDown"){ mph = Math.max(0, mph-1); $("speed").value = String(mph); $("mph").textContent=String(mph); }
+  });
+
+  // Audio
   const audio = new (window.AudioContext||window.webkitAudioContext)();
   const whistle = ()=>{
     const o=audio.createOscillator(), g=audio.createGain();
@@ -243,7 +268,7 @@
   };
   const bell = ()=>{
     const o1=audio.createOscillator(), o2=audio.createOscillator(), g=audio.createGain();
-    o1.type=o2.type='sine'; o1.frequency.value=660; o2.value=990;
+    o1.type=o2.type='sine'; o1.frequency.value=660; o2.frequency.value=990;
     g.gain.value=0.001;
     g.gain.exponentialRampToValueAtTime(0.35,audio.currentTime+0.02);
     g.gain.exponentialRampToValueAtTime(0.001,audio.currentTime+0.6);
@@ -262,8 +287,13 @@
   });
   const setDark = on=>{
     document.querySelector(".wrap").classList.toggle("dark", on);
-    if(on){ scene.fog.color.set(0x0b1220); renderer.setClearColor(0x0b1220,1); hemi.intensity=.35; sun.intensity=.6; }
-    else { scene.fog.color.set(0xcfe8ff); renderer.setClearColor(0xcfe8ff,1); hemi.intensity=.7; sun.intensity=1.1; }
+    if(on){
+      renderer.setClearColor(0x0b1220,1);
+      hemi.intensity=.35; sun.intensity=1.4;
+    } else {
+      renderer.setClearColor(0xcfe8ff,1);
+      hemi.intensity=.5; sun.intensity=2.0;
+    }
   };
   setDark(false);
   document.getElementById("dark").addEventListener("click", ()=> setDark(!document.querySelector(".wrap").classList.contains("dark")));
@@ -276,37 +306,31 @@
   }
   new ResizeObserver(fit).observe(container); fit();
 
-  // Animate cars along the loop
+  // Animate
   const clock = new THREE.Clock();
-  let theta = 0; // head angle
+  let theta = 0;
   function animate(){
     const dt = clock.getDelta();
-    const mps = (mph * 1609.344) / 3600;         // mph -> m/s
-    const angVel = mps / TRACK_RADIUS;           // rad/s
+    const mps = (mph * 1609.344) / 3600;
+    const angVel = mps / TRACK_RADIUS;
     theta += angVel * dt;
 
-    // place cars: front at theta, each car spaced by ARC_SPACING
+    // place cars
     for(let i=0;i<CAR_COUNT;i++){
       const ang = theta - i * ARC_SPACING;
       placeCar(cars[i], ang);
     }
 
-    // ride-along camera at a specific car index, offset a bit to feel seated
-    const rideAng = theta - CAMERA_CAR_INDEX * ARC_SPACING;
-    const cx = Math.cos(rideAng) * TRACK_RADIUS;
-    const cz = Math.sin(rideAng) * TRACK_RADIUS;
-    const tangentY = Math.atan2(Math.cos(rideAng), -Math.sin(rideAng));
-    cameraRigYaw.position.set(cx, 0.62, cz); // seated eye height in car
-    cameraRigYaw.rotation.y = tangentY;      // align to direction of travel
-    cameraRigPitch.position.set(0,0,0);
-    camera.position.set(0,0,0);
+    // camera ride
+    const rideAng = theta - (10 * ARC_SPACING);
+    updateCamera(rideAng, clock.elapsedTime);
 
     renderer.render(scene, camera);
     requestAnimationFrame(animate);
   }
   animate();
 
-  log("Riding 10 cars back — enjoy!");
+  log("Ride 10 cars back — arrow keys to steer!");
 })();
 </script>
 </body>
