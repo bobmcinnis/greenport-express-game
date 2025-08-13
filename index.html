@@ -3,104 +3,25 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Greenport Express — Toon Buddies Pop & Play</title>
+<title>Greenport Express — Line Art Pop</title>
 <style>
-  :root{--bg:#fcf9f3;--fg:#1f2937;--accent:#ff7aa2;--accent2:#7dd3fc}
   html,body{height:100%;margin:0}
-  body{
-    font:16px/1.5 "Comic Sans MS","Comic Neue","Trebuchet MS",system-ui,-apple-system,Segoe UI,Roboto,Arial;
-    background:var(--bg); color:var(--fg); cursor:crosshair;
-  }
+  body{background:#ffffff;color:#111;font:14px/1.4 system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;cursor:crosshair}
   .wrap{position:fixed;inset:0}
-  .head{
-    position:absolute;left:0;right:0;top:0;z-index:3;
-    display:flex;gap:12px;justify-content:center;align-items:center;
-    padding:10px 14px; background:#fff; border-bottom:4px solid #111; box-shadow:0 6px 0 #111;
-  }
-  .head h1{margin:0;font-size:20px}
-  .tag{background:var(--accent);color:#fff;padding:4px 10px;border-radius:999px;border:2px solid #111;box-shadow:0 3px 0 #111}
-  .scene{position:absolute;inset:58px 0 0 0}
+  .scene{position:absolute;inset:0}
   .hud{
-    position:absolute;left:50%;bottom:12px;transform:translateX(-50%);
-    display:flex;gap:10px;align-items:center;flex-wrap:wrap;z-index:3;
-    background:#fff;border:4px solid #111;border-radius:16px;box-shadow:0 8px 0 #111;padding:8px 12px
+    position:absolute;left:50%;bottom:10px;transform:translateX(-50%);
+    background:#fff;border:1px solid #111;border-radius:10px;padding:6px 10px;display:flex;gap:10px;align-items:center;z-index:2
   }
-  .ctl{display:grid;gap:4px;font-size:13px}
-  .sp{width:2px;align-self:stretch;background:#111}
-  .btn{
-    appearance:none;border:4px solid #111;background:var(--accent2);color:#111;
-    padding:6px 10px;border-radius:12px;box-shadow:0 6px 0 #111;cursor:pointer;font-weight:700
-  }
-  .btn.ghost{background:#fff}
-  .range{-webkit-appearance:none;appearance:none;width:220px;height:10px;border:3px solid #111;border-radius:999px;background:#ffe9ef}
-  .range::-webkit-slider-thumb{-webkit-appearance:none;width:20px;height:20px;border-radius:50%;background:#fff;border:3px solid #111}
-  .ribbon{
-    position:absolute;top:64px;right:12px;z-index:3;background:#fff;border:4px solid #111;border-radius:14px;
-    padding:8px 10px;box-shadow:0 8px 0 #111;min-width:210px
-  }
-  .row{display:flex;justify-content:space-between;margin:2px 0}
-  #status{position:absolute;top:64px;left:12px;z-index:3;font-size:13px;background:#fff;border:3px solid #111;border-radius:10px;padding:4px 8px}
-  /* Speech bubbles */
-  .bubble{
-    position:absolute;z-index:3;left:12px;bottom:110px;
-    background:#fff;border:4px solid #111;border-radius:16px;box-shadow:0 8px 0 #111;
-    padding:10px 12px;max-width:320px
-  }
-  .bubble:after{
-    content:""; position:absolute; left:26px; bottom:-18px; width:0;height:0;
-    border-left:12px solid transparent;border-right:12px solid transparent;border-top:18px solid #fff;
-    filter: drop-shadow(0 6px 0 #111);
-  }
-  .pad{position:absolute;right:14px;bottom:14px;z-index:3;display:grid;grid-template-columns:56px 56px 56px;grid-template-rows:56px 56px 56px;gap:8px}
-  .pad button{appearance:none;border:4px solid #111;background:#fff;border-radius:10px;box-shadow:0 6px 0 #111;font-weight:900;cursor:pointer}
-  .pad .blank{visibility:hidden}
-  .popup{position:absolute;left:0;top:0;transform:translate(-50%,-50%);color:#15803d;font-weight:900;text-shadow:2px 2px 0 #fff, -2px -2px 0 #fff, 0 0 0 #111;pointer-events:none}
-  /* Make scene clickable even under UI */
-  .scene{pointer-events:auto}
-  .head,.hud,.ribbon,.bubble,.pad{pointer-events:none}
-  .hud button,.pad button{pointer-events:auto}
+  .hud small{opacity:.7}
+  #status{position:absolute;left:10px;top:10px;background:#fff;border:1px solid #111;border-radius:8px;padding:4px 8px;z-index:2}
 </style>
 </head>
 <body>
 <div class="wrap">
-  <div class="head">
-    <h1>Greenport Express — Toon Buddies Pop & Play</h1>
-    <span class="tag">Click or Space to POP!</span>
-  </div>
-
   <div id="status">Loading…</div>
-  <div class="scene" id="scene" tabindex="0" aria-label="Game canvas"></div>
-
-  <div class="ribbon">
-    <div class="row"><strong>Score</strong><span id="score">0</span></div>
-    <div class="row"><strong>Combo</strong><span id="combo">x1</span></div>
-    <div class="row"><strong>Hits</strong><span id="hits">0</span></div>
-  </div>
-
-  <div class="bubble" id="buddyBubble">“Hi! Aim with the mouse. Click or press Space to pop balloons!”</div>
-
-  <div class="hud">
-    <div class="ctl">
-      <label for="speed">Speed</label>
-      <input id="speed" class="range" type="range" min="0" max="35" value="12" />
-    </div>
-    <div style="font-size:13px"><strong id="mph">12</strong> mph</div>
-    <div class="sp"></div>
-    <button id="whistle" class="btn ghost">Whistle</button>
-    <button id="bell" class="btn ghost">Bell</button>
-    <div class="sp"></div>
-    <button id="dark" class="btn">Night</button>
-    <button id="tall" class="btn ghost" title="See over the cars">Tall: Off</button>
-    <button id="center" class="btn ghost">Center View</button>
-    <button id="photo" class="btn ghost">Photo</button>
-  </div>
-
-  <!-- Optional on‑screen look pad -->
-  <div class="pad" aria-label="look controls">
-    <span class="blank"></span><button id="padUp">↑</button><span class="blank"></span>
-    <button id="padLeft">←</button><span class="blank"></span><button id="padRight">→</button>
-    <span class="blank"></span><button id="padDown">↓</button><span class="blank"></span>
-  </div>
+  <div id="scene" class="scene" tabindex="0" aria-label="Game canvas"></div>
+  <div class="hud"><strong>Score:</strong><span id="score">0</span><small>(Click or Space to shoot • Drag / ← → ↑ ↓ to look)</small></div>
 </div>
 
 <script src="./three.min.js"></script>
@@ -110,196 +31,148 @@
   if(!window.THREE){ setStatus('ERROR: three.min.js not found next to index.html'); return; }
   const THREE = window.THREE;
 
-  // ---------- Renderer / scene ----------
+  // --- Renderer / Scene / Camera ---
   const container = document.getElementById('scene');
   const renderer = new THREE.WebGLRenderer({ antialias:true, preserveDrawingBuffer:true });
   renderer.setPixelRatio(Math.min(window.devicePixelRatio||1, 2));
-  renderer.outputColorSpace = THREE.SRGBColorSpace;
-  renderer.toneMapping = THREE.ACESFilmicToneMapping;
+  renderer.setClearColor(0xffffff, 1);
   container.appendChild(renderer.domElement);
-  const scene = new THREE.Scene();
-  const camera = new THREE.PerspectiveCamera(72, 1, 0.05, 2000); scene.add(camera);
 
-  // Fit to container
+  const scene = new THREE.Scene();
+  const camera = new THREE.PerspectiveCamera(70, 1, 0.05, 2000);
+  scene.add(camera);
+
   function fit(){ const r=container.getBoundingClientRect(); const w=Math.max(1,r.width), h=Math.max(1,r.height);
     camera.aspect=w/h; camera.updateProjectionMatrix(); renderer.setSize(w,h,false); }
   new ResizeObserver(fit).observe(container); fit();
 
-  // ---------- Toon helpers ----------
-  // Tiny 4‑band gradient texture for toon shading
-  function makeRamp(){
-    const c=document.createElement('canvas'); c.width=4;c.height=4; const g=c.getContext('2d');
-    const stops=[['#ffffff',1],['#ffd9e6',1],['#fbb0c8',1],['#ea8db0',1]];
-    for(let x=0;x<4;x++){ g.fillStyle=stops[x][0]; g.fillRect(x,0,1,4); }
-    const t=new THREE.CanvasTexture(c); t.magFilter=THREE.NearestFilter; t.minFilter=THREE.NearestFilter; return t;
+  // --- Simple helpers ---
+  const BLACK = new THREE.LineBasicMaterial({ color: 0x111111, linewidth: 1 });
+  function lineCircle(r, seg=64){
+    const g=new THREE.BufferGeometry(), pos=[];
+    for(let i=0;i<=seg;i++){ const a=i/seg*Math.PI*2; pos.push(Math.cos(a)*r,0,Math.sin(a)*r); }
+    g.setAttribute('position', new THREE.Float32BufferAttribute(pos,3));
+    return new THREE.Line(g, BLACK);
   }
-  const toonRamp = makeRamp();
-
-  function toonMat(color){
-    return new THREE.MeshToonMaterial({ color, gradientMap: toonRamp });
+  function lineRing(r1,r2, seg=64){
+    const g=new THREE.BufferGeometry(), pos=[];
+    for(let i=0;i<=seg;i++){ const a=i/seg*Math.PI*2; pos.push(Math.cos(a)*r1,0,Math.sin(a)*r1, Math.cos(a)*r2,0,Math.sin(a)*r2); }
+    g.setAttribute('position', new THREE.Float32BufferAttribute(pos,3));
+    return new THREE.LineSegments(g, BLACK);
   }
-  // Outline by backface‑scaled duplicate
-  function addOutline(mesh, thickness=0.035, col=0x111111){
-    const geo = mesh.geometry ? mesh.geometry.clone() : null;
-    if(!geo) return;
-    const mat = new THREE.MeshBasicMaterial({ color: col, side: THREE.BackSide });
-    const outline = new THREE.Mesh(geo, mat);
-    outline.scale.multiplyScalar(1+thickness);
-    outline.position.copy(mesh.position);
-    outline.rotation.copy(mesh.rotation);
-    outline.castShadow=false; outline.receiveShadow=false;
-    mesh.add(outline);
+  function lineRect(w,h){
+    const hw=w/2, hh=h/2;
+    const pts=[[-hw,0,-hh],[hw,0,-hh],[hw,0,hh],[-hw,0,hh],[-hw,0,-hh]];
+    const g=new THREE.BufferGeometry(), pos=[]; for(let i=0;i<pts.length-1;i++){ pos.push(...pts[i],...pts[i+1]); }
+    g.setAttribute('position', new THREE.Float32BufferAttribute(pos,3));
+    return new THREE.LineSegments(g, BLACK);
   }
+  const rnd=(a,b)=>a+Math.random()*(b-a);
 
-  // ---------- Lights ----------
-  const hemi = new THREE.HemisphereLight(0xffffff, 0xbbe0c0, 0.9); scene.add(hemi);
-  const sun = new THREE.DirectionalLight(0xffffff, 1.1); sun.position.set(80,120,50); scene.add(sun);
-  const nightGroup = new THREE.Group(); nightGroup.visible=false; scene.add(nightGroup);
+  // --- Ground circle (just a faint ring guideline) ---
+  const groundRing = lineCircle(900, 256); groundRing.material.opacity=0.15; groundRing.material.transparent=true; scene.add(groundRing);
 
-  // ---------- Ground (pastel) ----------
-  const ground = new THREE.Mesh(new THREE.CircleGeometry(900, 96), toonMat(0xbfeec8));
-  ground.rotation.x=-Math.PI/2; scene.add(ground); addOutline(ground,0.01);
-
-  // ---------- Track (simple toon) ----------
+  // --- Track as two line circles ---
   const TRACK_RADIUS=85, GAUGE=0.6;
-  function CirclePath(r){ this.radius=r; } CirclePath.prototype=Object.create(THREE.Curve.prototype);
-  CirclePath.prototype.getPoint=function(t){ const a=t*Math.PI*2; return new THREE.Vector3(Math.cos(a)*this.radius,0,Math.sin(a)*this.radius); };
-  const railMat = toonMat(0x9aa5b1);
-  const innerRail = new THREE.Mesh(new THREE.TubeGeometry(new CirclePath(TRACK_RADIUS-GAUGE/2),720,0.07,12,true), railMat);
-  const outerRail = innerRail.clone(); outerRail.geometry=new THREE.TubeGeometry(new CirclePath(TRACK_RADIUS+GAUGE/2),720,0.07,12,true);
-  scene.add(innerRail,outerRail); [innerRail,outerRail].forEach(m=>addOutline(m,0.08));
+  const railIn = lineCircle(TRACK_RADIUS-GAUGE/2, 256);
+  const railOut= lineCircle(TRACK_RADIUS+GAUGE/2, 256);
+  scene.add(railIn, railOut);
 
-  const ballast = new THREE.Mesh(new THREE.RingGeometry(TRACK_RADIUS-GAUGE/2-1.6, TRACK_RADIUS+GAUGE/2+1.6, 80), toonMat(0xe6e2da));
-  ballast.geometry.rotateX(-Math.PI/2); scene.add(ballast); addOutline(ballast,0.02);
-
-  // ---------- Trees (cone stacks) ----------
-  const trunkGeo=new THREE.CylinderGeometry(0.35,0.45,2.8,6);
-  const trunkMat=toonMat(0x8d6a3b);
-  const foliageMat=toonMat(0x6bd19b);
+  // --- “Trees” as stick cones + trunks (lines) ---
   function addTree(x,z,s){
-    const t=new THREE.Mesh(trunkGeo,trunkMat); t.scale.set(s,s,s); t.position.set(x,1.4*s,z); scene.add(t); addOutline(t,0.09);
-    [[1.7,3.0,3.0],[1.4,2.6,4.4],[1.1,2.2,5.7]].forEach(([r,h,y])=>{
-      const c=new THREE.Mesh(new THREE.ConeGeometry(r*s,h*s,7), foliageMat); c.position.set(x,y*s,z); scene.add(c); addOutline(c,0.09);
-    });
+    const g=new THREE.Group();
+    const trunk=lineRect(0.1,2.2*s); trunk.position.set(0,1.1*s,0); g.add(trunk);
+    const crown1=lineCircle(0.9*s,24); crown1.position.set(0,2.2*s,0); g.add(crown1);
+    const crown2=lineCircle(0.6*s,18); crown2.position.set(0,3.1*s,0); g.add(crown2);
+    g.position.set(x,0,z); scene.add(g);
   }
-  const R=(a,b)=>a+Math.random()*(b-a);
-  for(let i=0;i<420;i++){ const r=R(95,860), th=R(0,Math.PI*2); addTree(Math.cos(th)*r,Math.sin(th)*r,R(.7,1.2)); }
-  for(let i=0;i<220;i++){ const r=R(110,280), th=R(0,Math.PI*2); if(Math.abs(r-TRACK_RADIUS)>12) addTree(Math.cos(th)*r,Math.sin(th)*r,R(.6,1.0)); }
+  for(let i=0;i<260;i++){ const r=rnd(110,280), th=rnd(0,Math.PI*2); if(Math.abs(r-TRACK_RADIUS)>10) addTree(Math.cos(th)*r,Math.sin(th)*r,rnd(.7,1.3)); }
 
-  // ---------- Mascot buddies (simple shapes) ----------
-  const buddies = new THREE.Group(); scene.add(buddies);
-  // Elephant buddy “Pachy”
-  (function(){
-    const g=new THREE.Group();
-    const body=new THREE.Mesh(new THREE.SphereGeometry(0.9, 12, 10), toonMat(0xbad7f7)); addOutline(body,0.12); g.add(body);
-    const head=new THREE.Mesh(new THREE.SphereGeometry(0.65, 12, 10), toonMat(0xbad7f7)); head.position.set(0,0.75,0.55); addOutline(head,0.12); g.add(head);
-    const trunk=new THREE.Mesh(new THREE.CylinderGeometry(0.14,0.16,0.9,8), toonMat(0xbad7f7)); trunk.rotation.x=Math.PI/2; trunk.position.set(0,0.55,1.1); addOutline(trunk,0.12); g.add(trunk);
-    const earL=new THREE.Mesh(new THREE.SphereGeometry(0.45, 10, 8), toonMat(0xbad7f7)); earL.scale.z=0.3; earL.position.set(-0.55,0.85,0.3); addOutline(earL,0.12); g.add(earL);
-    const earR=earL.clone(); earR.position.x=0.55; g.add(earR);
-    const eyeMat=toonMat(0x111111);
-    const e1=new THREE.Mesh(new THREE.SphereGeometry(0.06, 8, 6), eyeMat); e1.position.set(-0.18,0.9,1.0); g.add(e1);
-    const e2=e1.clone(); e2.position.x=0.18; g.add(e2);
-    g.position.set(TRACK_RADIUS-6,0,6);
-    buddies.add(g);
-  })();
-  // Pig buddy “Snout”
-  (function(){
-    const g=new THREE.Group();
-    const body=new THREE.Mesh(new THREE.SphereGeometry(0.8, 12, 10), toonMat(0xffb1c6)); addOutline(body,0.12); g.add(body);
-    const head=new THREE.Mesh(new THREE.SphereGeometry(0.55, 12, 10), toonMat(0xffb1c6)); head.position.set(0,0.7,0.45); addOutline(head,0.12); g.add(head);
-    const snout=new THREE.Mesh(new THREE.CylinderGeometry(0.18,0.2,0.35,8), toonMat(0xff99b7)); snout.rotation.x=Math.PI/2; snout.position.set(0,0.7,0.85); addOutline(snout,0.12); g.add(snout);
-    const ear=new THREE.Mesh(new THREE.ConeGeometry(0.18,0.3,6), toonMat(0xffb1c6)); ear.position.set(-0.25,1.0,0.25); ear.rotation.x=-0.3; addOutline(ear,0.12); g.add(ear);
-    const ear2=ear.clone(); ear2.position.x=0.25; g.add(ear2);
-    const e1=new THREE.Mesh(new THREE.SphereGeometry(0.06, 8, 6), toonMat(0x111111)); e1.position.set(-0.14,0.82,0.9); g.add(e1);
-    const e2=e1.clone(); e2.position.x=0.14; g.add(e2);
-    g.position.set(TRACK_RADIUS-2,0,8);
-    buddies.add(g);
-  })();
-
-  // ---------- Train cars (simple toon) ----------
+  // --- Train cars as simple rectangles on the track ---
   const CAR_CT=20, CAR_SP=2.2;
-  const carMat=toonMat(0xcfd8e3);
-  function coalCar(){
-    const g=new THREE.Group();
-    const box=new THREE.Mesh(new THREE.BoxGeometry(1.8,0.7,1.2), carMat); g.add(box); addOutline(box,0.12);
-    const wheelMat=toonMat(0x333333);
-    const wheel=(x,z)=>{const w=new THREE.Mesh(new THREE.CylinderGeometry(0.22,0.22,0.28,8), wheelMat); w.rotation.z=Math.PI/2; w.position.set(x,-0.42,z); g.add(w); addOutline(w,0.15);};
-    wheel(-0.6, 0.55); wheel(-0.6,-0.55); wheel(0.6,0.55); wheel(0.6,-0.55);
-    return g;
-  }
-  const train=new THREE.Group(), cars=[];
-  for(let i=0;i<CAR_CT;i++){ const c=coalCar(); cars.push(c); train.add(c); }
-  scene.add(train);
+  const train = new THREE.Group(); scene.add(train);
+  const carGeom = lineRect(1.8,1.2);
+  function makeCar(){ return carGeom.clone(); }
+  const cars=[]; for(let i=0;i<CAR_CT;i++){ const c=makeCar(); cars.push(c); train.add(c); }
 
   const ANGLE_PER_M = 1 / TRACK_RADIUS;
   const ARC_SPACING = CAR_SP * ANGLE_PER_M;
   function placeCar(car, angle){
-    const x = Math.cos(angle)*TRACK_RADIUS, z = Math.sin(angle)*TRACK_RADIUS;
-    const tx = -Math.sin(angle), tz = Math.cos(angle);
-    car.position.set(x,0,z); car.rotation.y = Math.atan2(tx,tz);
+    car.position.set(Math.cos(angle)*TRACK_RADIUS,0,Math.sin(angle)*TRACK_RADIUS);
+    car.rotation.y = Math.atan2(-Math.sin(angle), Math.cos(angle));
   }
 
-  // ---------- Targets (toon balloons/ducks/stars/buoys) ----------
+  // --- Targets: line balloons / ducks / stars / buoys ---
   const TARGETS = new THREE.Group(); scene.add(TARGETS);
-  const defs = [
-    { kind:'balloon', color:0xff7aa2, radius:0.28, points:50 },
-    { kind:'balloon', color:0x7dd3fc, radius:0.28, points:50 },
-    { kind:'balloon', color:0xfde047, radius:0.28, points:50 },
-    { kind:'duck', color:0xffe08a, radius:0.30, points:75 },
-    { kind:'buoy', color:0x22c55e, radius:0.32, points:60 },
-    { kind:'star', color:0xf97316, radius:0.30, points:80 }
-  ];
-  function makeTarget(def){
-    let mesh;
-    if(def.kind==='star'){
-      const star = new THREE.Shape(); const spikes=5, outer=def.radius*1.8, inner=def.radius*0.8;
-      let rot=Math.PI/2*3, x=0,y=0, step=Math.PI/spikes; star.moveTo(0,-outer);
-      for(let i=0;i<spikes;i++){ x=Math.cos(rot)*outer; y=Math.sin(rot)*outer; star.lineTo(x,y); rot+=step; x=Math.cos(rot)*inner; y=Math.sin(rot)*inner; star.lineTo(x,y); rot+=step; }
-      star.lineTo(0,-outer);
-      mesh = new THREE.Mesh(new THREE.ExtrudeGeometry(star,{depth:0.12,bevelEnabled:false}), toonMat(def.color));
-    } else if(def.kind==='buoy'){
-      mesh = new THREE.Mesh(new THREE.ConeGeometry(def.radius*1.1, def.radius*3.4, 8), toonMat(def.color));
-    } else if(def.kind==='duck'){
-      const body = new THREE.Mesh(new THREE.SphereGeometry(def.radius*1.1, 8, 6), toonMat(def.color));
-      const head = new THREE.Mesh(new THREE.SphereGeometry(def.radius*0.7, 8, 6), toonMat(def.color)); head.position.set(0, def.radius*0.9, def.radius*0.4);
-      const beak = new THREE.Mesh(new THREE.ConeGeometry(def.radius*0.35, def.radius*0.6, 6), toonMat(0xff9900)); beak.rotation.x=Math.PI/2; beak.position.copy(head.position).add(new THREE.Vector3(0,0,def.radius*0.45));
-      mesh = new THREE.Group(); mesh.add(body, head, beak);
-    } else { // balloon
-      mesh = new THREE.Mesh(new THREE.SphereGeometry(def.radius, 10, 8), toonMat(def.color));
-      const string = new THREE.Mesh(new THREE.CylinderGeometry(0.02,0.02, def.radius*2.2, 6), toonMat(0x111111)); string.position.y=-def.radius*1.1; mesh.add(string);
+  function starLines(r){
+    const spikes=5, outer=r*1.8, inner=r*0.8, g=new THREE.BufferGeometry(), pos=[];
+    let rot=-Math.PI/2, step=Math.PI/spikes, last=null;
+    for(let i=0;i<spikes*2;i++){
+      const rad = (i%2===0)?outer:inner;
+      const x=Math.cos(rot)*rad, y=0, z=Math.sin(rot)*rad;
+      if(last){ pos.push(last.x,last.y,last.z, x,y,z); }
+      last=new THREE.Vector3(x,y,z);
+      rot+=step;
     }
-    mesh.userData = { kind:def.kind, points:def.points, alive:true, baseY:0, animT:Math.random()*10, radius:def.radius };
-    addOutline(mesh,0.18);
+    // close shape
+    const firstX=Math.cos(-Math.PI/2)*outer, firstZ=Math.sin(-Math.PI/2)*outer;
+    pos.push(last.x,0,last.z, firstX,0,firstZ);
+    g.setAttribute('position', new THREE.Float32BufferAttribute(pos,3));
+    return new THREE.LineSegments(g, BLACK);
+  }
+  function balloon(r){
+    const g=lineCircle(r,32);
+    const string=lineRect(0.02, r*2.0); string.position.y = -r*1.1;
+    const group=new THREE.Group(); group.add(g,string); return group;
+  }
+  function duck(r){
+    const body=lineCircle(r*1.1,24);
+    const head=lineCircle(r*0.7,18); head.position.set(0, r*0.9, r*0.4);
+    const beak=lineRect(r*0.35, r*0.25); beak.position.copy(head.position).add(new THREE.Vector3(0,0,r*0.45));
+    const g=new THREE.Group(); g.add(body,head,beak); return g;
+  }
+  function buoy(r){
+    const base=lineCircle(r*0.8,16);
+    const mast=lineRect(0.05, r*3.0); mast.position.y=r*1.5;
+    const g=new THREE.Group(); g.add(base,mast); return g;
+  }
+  const targetKinds=['balloon','duck','buoy','star'];
+  function makeTarget(){
+    const kind = targetKinds[Math.floor(Math.random()*targetKinds.length)];
+    const r = kind==='balloon'?0.28: kind==='duck'?0.30 : kind==='buoy'?0.32 : 0.30;
+    let mesh;
+    if(kind==='balloon') mesh=balloon(r);
+    else if(kind==='duck') mesh=duck(r);
+    else if(kind==='buoy') mesh=buoy(r);
+    else mesh=starLines(r);
+    mesh.userData = { kind, radius:r, alive:true, baseY:0.6+Math.random()*1.6, animT:Math.random()*10, points: kind==='star'?80: kind==='duck'?75: kind==='buoy'?60:50 };
     return mesh;
   }
-  function spawnTargets() {
-    for(let i=0;i<80;i++){
-      const d = defs[Math.floor(Math.random()*defs.length)];
-      const t = Math.random()*Math.PI*2;
-      const r = TRACK_RADIUS + (Math.random()<.5 ? -10 : 16) + Math.random()*12;
-      const m = makeTarget(d);
-      m.position.set(Math.cos(t)*r, d.kind==='buoy' ? 0.05 : 0.6+Math.random()*1.8, Math.sin(t)*r);
-      m.userData.baseY = m.position.y;
-      TARGETS.add(m);
+  function spawnTargets(){
+    for(let i=0;i<60;i++){
+      const t = makeTarget();
+      const ang = Math.random()*Math.PI*2;
+      const rad = TRACK_RADIUS + (Math.random()<.5?-10:16) + Math.random()*10;
+      t.position.set(Math.cos(ang)*rad, t.userData.baseY, Math.sin(ang)*rad);
+      TARGETS.add(t);
     }
   }
   spawnTargets();
 
-  // ---------- Controls (yaw/pitch) ----------
-  let yawDeg=0, pitchDeg=0;
+  // --- Input: yaw/pitch + shooting ---
+  let yawDeg=0, pitchDeg=0, eyeY=0.9, targetEye=0.9;
   const PITCH_MIN=-80, PITCH_MAX=80;
-  let eyeY = 0.8, targetEye = 0.8;
-  const SEATED=0.8, TALL=1.25;
+  const scoreEl=document.getElementById('score'); let score=0;
 
-  // Drag look
-  (function attachDrag(){
+  // drag to look
+  (function(){
     const el=renderer.domElement; let drag=false,lx=0,ly=0; const s=0.18;
     const P=e=>e.touches?{x:e.touches[0].clientX,y:e.touches[0].clientY}:{x:e.clientX,y:e.clientY};
-    el.addEventListener('pointerdown',e=>{drag=true; const p=P(e); lx=p.x; ly=p.y; el.setPointerCapture?.(e.pointerId||0); container.focus(); });
+    el.addEventListener('pointerdown',e=>{drag=true; const p=P(e); lx=p.x; ly=p.y; el.setPointerCapture?.(e.pointerId||0); container.focus();});
     el.addEventListener('pointermove',e=>{ if(!drag) return; const p=P(e); const dx=p.x-lx, dy=p.y-ly; lx=p.x; ly=p.y; yawDeg+=dx*s; pitchDeg=Math.max(PITCH_MIN,Math.min(PITCH_MAX,pitchDeg-dy*s)); });
     const up=()=>{drag=false}; el.addEventListener('pointerup',up); el.addEventListener('pointerleave',up);
   })();
-  // Arrow keys + space
+  // arrows + space
   window.addEventListener('keydown',e=>{
     const step=4;
     if(e.key==='ArrowLeft')  yawDeg-=step;
@@ -308,156 +181,114 @@
     if(e.key==='ArrowDown')  pitchDeg=Math.max(PITCH_MIN, pitchDeg-step);
     if(e.code==='Space'){ e.preventDefault(); shoot(); }
   });
-  // On‑screen pad
-  function hold(btn,fn){ let t=null; const start=ev=>{ev.preventDefault(); if(t) return; fn(); t=setInterval(fn,80)}; const stop=()=>{clearInterval(t);t=null};
-    btn.addEventListener('pointerdown',start); btn.addEventListener('pointerup',stop); btn.addEventListener('pointerleave',stop); btn.addEventListener('pointercancel',stop); }
-  hold(document.getElementById('padLeft'), ()=>{yawDeg-=4});  hold(document.getElementById('padRight'), ()=>{yawDeg+=4});
-  hold(document.getElementById('padUp'),   ()=>{pitchDeg=Math.min(PITCH_MAX, pitchDeg+3)}); hold(document.getElementById('padDown'), ()=>{pitchDeg=Math.max(PITCH_MIN, pitchDeg-3)});
+  container.addEventListener('click', ()=>shoot());
 
-  // UI buttons
-  document.getElementById('tall').addEventListener('click',()=>{ targetEye = (targetEye===SEATED?TALL:SEATED); const on = targetEye===TALL; const b=document.getElementById('tall'); b.textContent=`Tall: ${on?'On':'Off'}`; b.classList.toggle('ghost', !on); });
-  document.getElementById('center').addEventListener('click',()=>{ yawDeg=0; pitchDeg=0; document.getElementById('buddyBubble').textContent='“Centered! Try popping three balloons in a row!”'; });
-  let isNight=false; function setNight(on){ isNight=on; nightGroup.visible=on; renderer.setClearColor(on?0x0a0e16:0xfcf9f3,1); document.getElementById('dark').textContent = on? 'Day' : 'Night'; }
-  setNight(false); document.getElementById('dark').addEventListener('click',()=>setNight(!isNight));
-  document.getElementById('photo').addEventListener('click',()=>{ const a=document.createElement('a'); a.download='greenport-express.png'; a.href=renderer.domElement.toDataURL('image/png'); a.click(); });
-
-  // Speed + sounds
-  const speedEl=document.getElementById('speed'), mphEl=document.getElementById('mph');
-  let mph=parseFloat(speedEl.value); mphEl.textContent=String(mph);
-  speedEl.addEventListener('input',()=>{ mph=parseFloat(speedEl.value); mphEl.textContent=String(mph); });
-  const audio=new (window.AudioContext||window.webkitAudioContext)();
-  function popSound(){ const o=audio.createOscillator(), g=audio.createGain(); o.type='triangle'; o.frequency.value= Math.random()*200 + 600; g.gain.value=.0001; g.gain.exponentialRampToValueAtTime(.25,audio.currentTime+.02); g.gain.exponentialRampToValueAtTime(.0001,audio.currentTime+.2); o.connect(g).connect(audio.destination); o.start(); o.stop(audio.currentTime+.22); }
-  function ding(){ const o=audio.createOscillator(), g=audio.createGain(); o.type='sine'; o.frequency.value=880; g.gain.value=.0001; g.gain.exponentialRampToValueAtTime(.25,audio.currentTime+.01); g.gain.exponentialRampToValueAtTime(.0001,audio.currentTime+.25); o.connect(g).connect(audio.destination); o.start(); o.stop(audio.currentTime+.26); }
-  document.getElementById('whistle').addEventListener('click',()=>{ if(audio.state==='suspended') audio.resume(); const o=audio.createOscillator(),g=audio.createGain(); g.gain.value=.001;o.type='sine';
-    o.frequency.setValueAtTime(720,audio.currentTime); o.frequency.exponentialRampToValueAtTime(1100,audio.currentTime+.35); o.frequency.exponentialRampToValueAtTime(680,audio.currentTime+.9);
-    g.gain.exponentialRampToValueAtTime(.5,audio.currentTime+.04); g.gain.exponentialRampToValueAtTime(.32,audio.currentTime+.4); g.gain.exponentialRampToValueAtTime(.001,audio.currentTime+1.0);
-    o.connect(g).connect(audio.destination); o.start(); o.stop(audio.currentTime+1.05); });
-  document.getElementById('bell').addEventListener('click',()=>{ if(audio.state==='suspended') audio.resume(); ding(); });
-
-  // ---------- Shooting (projectile + smoke trail + confetti) ----------
+  // --- Projectile + bursts (all line-based) ---
   const PROJECTILES=new THREE.Group(); scene.add(PROJECTILES);
   const PARTICLES=new THREE.Group(); scene.add(PARTICLES);
 
   function makeProjectile(){
-    const g=new THREE.Group();
-    const core=new THREE.Mesh(new THREE.SphereGeometry(0.07,10,8), toonMat(0x7dd3fc)); addOutline(core,0.25);
-    g.add(core); g.userData={vel:new THREE.Vector3(), ttl:1.6, trailT:0};
-    return g;
+    // a short line segment pointing forward
+    const g=new THREE.BufferGeometry();
+    g.setAttribute('position', new THREE.Float32BufferAttribute([0,0,0, 0,0,-0.6],3));
+    const line=new THREE.Line(g, BLACK);
+    line.userData={ vel:new THREE.Vector3(), ttl:1.2, trailT:0 };
+    return line;
   }
   function smokePuff(pos){
-    const s=new THREE.Sprite(new THREE.SpriteMaterial({color:0xffffff, opacity:0.7, transparent:true}));
-    s.position.copy(pos); s.scale.setScalar(0.2); s.userData={ttl:0.6,grow:1.2}; PARTICLES.add(s);
+    // little expanding ring
+    const ring=lineCircle(0.08,16);
+    ring.position.copy(pos); ring.userData={ttl:0.35, grow:1.4, fade:1};
+    PARTICLES.add(ring);
   }
-  function muzzlePuff(origin, dir){
-    const s=new THREE.Sprite(new THREE.SpriteMaterial({color:0xffffff, opacity:0.9, transparent:true}));
-    s.position.copy(origin).addScaledVector(dir,0.12); s.scale.setScalar(0.22); s.userData={ttl:0.2,grow:1.35}; PARTICLES.add(s);
-  }
-  function confetti(at){
-    for(let i=0;i<20;i++){
-      const chip=new THREE.Mesh(new THREE.BoxGeometry(0.05,0.01,0.02), toonMat(new THREE.Color().setHSL(Math.random(),0.7,0.6).getHex()));
-      chip.position.copy(at); chip.userData={vel:new THREE.Vector3((Math.random()-0.5)*1.4, Math.random()*1.8, (Math.random()-0.5)*1.4), ttl:0.9+Math.random()*0.6, rot:new THREE.Vector3(Math.random(),Math.random(),Math.random())};
-      PARTICLES.add(chip);
+  function popBurst(pos){
+    // expanding ring + falling line sticks
+    const ring=lineCircle(0.2,24); ring.position.copy(pos); ring.userData={ttl:0.5,grow:1.4,fade:1}; PARTICLES.add(ring);
+    for(let i=0;i<14;i++){
+      const stick=lineRect(0.02,0.12);
+      stick.position.copy(pos);
+      stick.userData={ vel:new THREE.Vector3((Math.random()-0.5)*1.3, Math.random()*1.6, (Math.random()-0.5)*1.3), ttl:0.8+Math.random()*0.6, rot:new THREE.Vector3(Math.random(),Math.random(),Math.random()) };
+      PARTICLES.add(stick);
     }
   }
 
-  let canShoot=true; const cooldown=120;
   function shoot(){
-    if(!canShoot) return; canShoot=false; setTimeout(()=>canShoot=true,cooldown);
-    if(audio.state==='suspended') audio.resume(); popSound();
+    // fire from camera forward
     const dir=new THREE.Vector3(); camera.getWorldDirection(dir).normalize();
-    const start=camera.position.clone().addScaledVector(dir,0.15);
+    const start=camera.position.clone().addScaledVector(dir, 0.15);
     const p=makeProjectile(); p.position.copy(start); p.userData.vel.copy(dir).multiplyScalar(40);
-    PROJECTILES.add(p); muzzlePuff(start,dir);
-    // bubble encouragement
-    document.getElementById('buddyBubble').textContent = '“Nice! Try to hit three balloons quickly for a combo!”';
+    PROJECTILES.add(p); smokePuff(start);
   }
-  container.addEventListener('click', shoot);
-  window.addEventListener('keydown',e=>{ if(e.code==='Space'){ e.preventDefault(); shoot(); } });
 
   function hitTarget(target, where){
     if(!target.userData.alive) return; target.userData.alive=false;
-    addScore(target.userData.points||50, where); ding();
-    // Pop animation (toon burst)
-    let s=1; let steps=0; const id=setInterval(()=>{ steps++; s*=1.18; target.scale.setScalar(s);
-      if(steps>6){ clearInterval(id); confetti(where); TARGETS.remove(target); disposeDeep(target); } }, 16);
-  }
-  function disposeDeep(obj){ obj.traverse(o=>{ o.geometry&&o.geometry.dispose(); if(o.material){ if(Array.isArray(o.material)) o.material.forEach(m=>m.dispose?.()); else o.material.dispose?.(); } }); }
-
-  // ---------- Score / combo ----------
-  let score=0, hits=0, combo=1, lastHitTime=0;
-  const scoreEl=document.getElementById('score'), hitsEl=document.getElementById('hits'), comboEl=document.getElementById('combo');
-  function addScore(n, at){
-    const now=performance.now(); combo=(now-lastHitTime<800)?Math.min(9,combo+1):1; lastHitTime=now;
-    const gain=Math.round(n*combo); score+=gain; hits+=1;
-    scoreEl.textContent=String(score); hitsEl.textContent=String(hits); comboEl.textContent='x'+combo;
-    popupPoints('+'+gain, at);
-  }
-  function popupPoints(txt, worldPos){
-    const v=worldPos.clone().project(camera);
-    const sx=(v.x*0.5+0.5)*renderer.domElement.clientWidth;
-    const sy=(-v.y*0.5+0.5)*renderer.domElement.clientHeight + 58;
-    const p=document.createElement('div'); p.className='popup'; p.textContent=txt;
-    p.style.left=`${sx}px`; p.style.top=`${sy}px`; document.body.appendChild(p);
-    let a=1,y=0; const t=setInterval(()=>{ y-=1; a-=0.04; p.style.transform=`translate(-50%,-50%) translateY(${y}px)`; p.style.opacity=String(Math.max(0,a)); if(a<=0){ clearInterval(t); p.remove(); } },16);
+    score += target.userData.points || 50; scoreEl.textContent=String(score);
+    popBurst(where); TARGETS.remove(target);
   }
 
-  // ---------- Animate ----------
+  // --- Animate ---
   let theta=0; const clock=new THREE.Clock();
   function animate(){
     const dt=clock.getDelta();
-    // move train
-    const mph=parseFloat(speedEl.value); mphEl.textContent=String(mph);
+
+    // train moves (constant slow pace, line version keeps it simple)
+    const mph=10; // fixed speed for simplicity
     const mps=(mph*1609.344)/3600, angVel=mps/TRACK_RADIUS; theta += angVel*dt;
     for(let i=0;i<CAR_CT;i++){ placeCar(cars[i], theta - i*ARC_SPACING); }
 
-    // camera ride (10 cars back) with yaw/pitch quats
-    const rideAng=theta - (10*ARC_SPACING);
-    eyeY += (targetEye - eyeY)*0.12;
-    const pos=new THREE.Vector3(Math.cos(rideAng)*TRACK_RADIUS, eyeY + Math.sin(clock.elapsedTime*2.5)*0.015, Math.sin(rideAng)*TRACK_RADIUS);
-    const forward=new THREE.Vector3(-Math.sin(rideAng),0,Math.cos(rideAng)).normalize();
-    const up=new THREE.Vector3(0,1,0);
-    const baseQ=new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0,0,-1), forward);
-    const yawQ=new THREE.Quaternion().setFromAxisAngle(up, THREE.MathUtils.degToRad(yawDeg));
-    const right=new THREE.Vector3().copy(forward).cross(up).normalize();
-    const pitchQ=new THREE.Quaternion().setFromAxisAngle(right, THREE.MathUtils.degToRad(pitchDeg));
+    // camera ride 10 cars back + look
+    const rideAng = theta - (10*ARC_SPACING);
+    const pos = new THREE.Vector3(Math.cos(rideAng)*TRACK_RADIUS, eyeY, Math.sin(rideAng)*TRACK_RADIUS);
+    const forward = new THREE.Vector3(-Math.sin(rideAng), 0, Math.cos(rideAng)).normalize();
+    const up = new THREE.Vector3(0,1,0);
+    const baseQ = new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0,0,-1), forward);
+    const yawQ  = new THREE.Quaternion().setFromAxisAngle(up, THREE.MathUtils.degToRad(yawDeg));
+    const right = new THREE.Vector3().copy(forward).cross(up).normalize();
+    const pitchQ= new THREE.Quaternion().setFromAxisAngle(right, THREE.MathUtils.degToRad(pitchDeg));
     camera.position.copy(pos); camera.quaternion.multiplyQuaternions(baseQ, yawQ).multiply(pitchQ);
 
-    // targets idle
+    // idle target motion
     TARGETS.children.forEach(t=>{
-      if(!t.userData.alive) return; t.userData.animT += dt;
-      if(t.userData.kind==='balloon'){ t.position.y=t.userData.baseY+Math.sin(t.userData.animT*1.6)*0.15; }
-      else if(t.userData.kind==='duck'){ t.position.x+=Math.sin(t.userData.animT*0.8)*0.015; t.position.z+=Math.cos(t.userData.animT*0.8)*0.015; }
-      else if(t.userData.kind==='buoy'){ t.position.y=t.userData.baseY+Math.sin(t.userData.animT*1.2)*0.06; }
-      else if(t.userData.kind==='star'){ t.rotation.z += 0.8*dt; }
+      if(!t.userData.alive) return;
+      t.userData.animT += dt;
+      if(t.userData.kind==='balloon'){ t.position.y = t.userData.baseY + Math.sin(t.userData.animT*1.6)*0.12; }
+      else if(t.userData.kind==='duck'){ t.position.x += Math.sin(t.userData.animT*0.8)*0.012; t.position.z += Math.cos(t.userData.animT*0.8)*0.012; }
+      else if(t.userData.kind==='buoy'){ t.position.y = t.userData.baseY + Math.sin(t.userData.animT*1.2)*0.05; }
+      else if(t.userData.kind==='star'){ t.rotation.y += 0.6*dt; }
     });
 
-    // projectiles
+    // projectiles + simple collision (sphere radius)
     for(let i=PROJECTILES.children.length-1;i>=0;i--){
       const pr=PROJECTILES.children[i];
       pr.position.addScaledVector(pr.userData.vel, dt);
-      pr.userData.ttl-=dt; pr.userData.trailT+=dt;
-      if(pr.userData.trailT>0.02){ pr.userData.trailT=0; smokePuff(pr.position.clone()); }
-      // hit test (sphere)
+      pr.userData.ttl -= dt;
+      pr.userData.trailT += dt;
+      if(pr.userData.trailT>0.03){ pr.userData.trailT=0; smokePuff(pr.position.clone()); }
+
       let hit=false, tgt=null, where=null;
       for(let j=0;j<TARGETS.children.length;j++){
         const t=TARGETS.children[j]; if(!t.userData.alive) continue;
-        const r=(t.userData.radius||0.3)+0.08; const wp=t.getWorldPosition(new THREE.Vector3());
-        if(pr.position.distanceTo(wp)<r){ hit=true; tgt=t; where=pr.position.clone(); break; }
+        const r=(t.userData.radius||0.3)+0.08;
+        const wp=t.getWorldPosition(new THREE.Vector3());
+        if(pr.position.distanceTo(wp) < r){ hit=true; tgt=t; where=pr.position.clone(); break; }
       }
-      if(hit){ PROJECTILES.remove(pr); disposeDeep(pr); if(tgt) hitTarget(tgt, where); continue; }
-      if(pr.userData.ttl<=0){ PROJECTILES.remove(pr); disposeDeep(pr); }
+      if(hit){ PROJECTILES.remove(pr); pr.geometry.dispose(); if(tgt) hitTarget(tgt, where); continue; }
+      if(pr.userData.ttl<=0){ PROJECTILES.remove(pr); pr.geometry.dispose(); }
     }
 
-    // particles
+    // particles (rings/sticks)
     for(let i=PARTICLES.children.length-1;i>=0;i--){
       const c=PARTICLES.children[i];
-      if(c.isSprite){
-        c.userData.ttl -= dt; c.scale.multiplyScalar(1.05); c.material.opacity*=0.92; c.position.y += 0.015;
-        if(c.userData.ttl<=0 || c.material.opacity<0.03){ PARTICLES.remove(c); c.material.dispose(); }
-      } else {
-        c.userData.ttl -= dt; c.userData.vel.y -= 2.5*dt; c.position.addScaledVector(c.userData.vel, dt);
+      if(c.geometry && c.userData && c.userData.grow){ // a ring
+        c.userData.ttl -= dt; c.scale.multiplyScalar(c.userData.grow); c.userData.fade *= 0.9;
+        c.material.opacity = c.userData.fade; c.material.transparent = true;
+        if(c.userData.ttl<=0 || c.material.opacity<0.05){ PARTICLES.remove(c); c.geometry.dispose(); }
+      }else if(c.geometry && c.userData && c.userData.vel){ // a stick
+        c.userData.ttl -= dt; c.userData.vel.y -= 2.3*dt; c.position.addScaledVector(c.userData.vel, dt);
         c.rotation.x += c.userData.rot.x*dt*6; c.rotation.y += c.userData.rot.y*dt*6; c.rotation.z += c.userData.rot.z*dt*6;
-        if(c.userData.ttl<=0){ PARTICLES.remove(c); disposeDeep(c); }
+        if(c.userData.ttl<=0){ PARTICLES.remove(c); c.geometry.dispose(); }
+      }else{ // fallback
+        PARTICLES.remove(c);
       }
     }
 
@@ -466,7 +297,9 @@
   }
   animate();
 
-  setStatus('Toon mode! Click or press Space to shoot. Use mouse/drag or arrows to look.');
+  // focus so Space works
+  setTimeout(()=>container.focus(), 50);
+  setStatus('Line‑art mode. Click or Space to shoot; drag or use arrows to look.');
 })();
 </script>
 </body>
